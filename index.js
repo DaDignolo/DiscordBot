@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
+const ytdl = require('ytdl-core-discord');
 
 const client = new Client({
   intents: [
@@ -16,12 +16,19 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
+let connection = null;
+
 client.once('ready', async () => {
   console.log('✅ Bot è online!');
 
   const commands = [
     new SlashCommandBuilder().setName('join').setDescription('Fai entrare il bot nel tuo canale vocale'),
-    new SlashCommandBuilder().setName('play').setDescription('Riproduce una canzone da un link di YouTube').addStringOption(option => option.setName('url').setDescription('Link del video YouTube').setRequired(true)),
+    new SlashCommandBuilder()
+      .setName('play')
+      .setDescription('Riproduce una canzone da un link di YouTube')
+      .addStringOption(option =>
+        option.setName('url').setDescription('Link del video YouTube').setRequired(true)
+      ),
   ].map(command => command.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -52,11 +59,13 @@ client.on('interactionCreate', async interaction => {
     }
 
     try {
-      const connection = joinVoiceChannel({
+      connection = joinVoiceChannel({
         channelId: voiceChannel.id,
         guildId: interaction.guild.id,
         adapterCreator: interaction.guild.voiceAdapterCreator,
       });
+
+      await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
 
       return interaction.reply(`✅ Sono entrato nel canale vocale: ${voiceChannel.name}`);
     } catch (error) {
@@ -79,29 +88,37 @@ client.on('interactionCreate', async interaction => {
     }
 
     try {
-      const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: interaction.guild.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-      });
-      
-      const stream = ytdl(url, { filter: 'audioonly' })
-        .on('error', (err) => {
-          console.error('❌ Errore nel recupero del flusso audio:', err);
-          interaction.reply('❌ Non sono riuscito a recuperare il flusso audio dal video.');
+      if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
+        connection = joinVoiceChannel({
+          channelId: voiceChannel.id,
+          guildId: interaction.guild.id,
+          adapterCreator: interaction.guild.voiceAdapterCreator,
         });
+        await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
+      }
 
-      const resource = createAudioResource(stream);
+      const stream = await ytdl(url, { filter: 'audioonly', highWaterMark: 1 << 25 });
+      const resource = createAudioResource(stream, { inputType: StreamType.Opus });
+
       const player = createAudioPlayer();
       player.play(resource);
 
       connection.subscribe(player);
-      player.on(AudioPlayerStatus.Playing, () => {
-        interaction.reply(`🎶 Ora sto riproducendo: ${url}`);
+
+      player.once(AudioPlayerStatus.Playing, () => {
+        interaction.reply(`🎶 Ora sto riproducendo: <${url}>`);
       });
 
       player.on(AudioPlayerStatus.Idle, () => {
         connection.destroy();
+        connection = null;
+      });
+
+      player.on('error', error => {
+        console.error('❌ Errore player:', error);
+        if (!interaction.replied) interaction.reply('❌ Errore durante la riproduzione del brano.');
+        connection.destroy();
+        connection = null;
       });
 
     } catch (error) {
