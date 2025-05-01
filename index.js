@@ -1,9 +1,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, entersState, VoiceConnectionStatus, StreamType } = require('@discordjs/voice');
-const fetch = require('node-fetch');
-const ytdl = require('ytdl-core');
 const ytSearch = require('yt-search');
+const ytdl = require('ytdl-core');
 
 const client = new Client({
   intents: [
@@ -23,13 +22,14 @@ let connection = null;
 client.once('ready', async () => {
   console.log('✅ Bot è online!');
 
+  // Registra il comando /play
   const commands = [
     new SlashCommandBuilder()
-      .setName('spotify')
-      .setDescription('Riproduce una canzone da un link Spotify')
+      .setName('play')
+      .setDescription('Riproduce una canzone cercandola su YouTube')
       .addStringOption(option =>
-        option.setName('url')
-          .setDescription('Link della canzone Spotify')
+        option.setName('query')
+          .setDescription('Nome della canzone o artista')
           .setRequired(true)
       ),
   ].map(cmd => cmd.toJSON());
@@ -41,48 +41,19 @@ client.once('ready', async () => {
       Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
       { body: commands }
     );
-    console.log('✅ Comando /spotify registrato!');
+    console.log('✅ Comando /play registrato!');
   } catch (error) {
     console.error('❌ Errore nella registrazione comandi:', error);
   }
 });
-
-async function getSpotifyTrackInfo(spotifyUrl) {
-  const match = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
-  if (!match) return null;
-  const trackId = match[1];
-
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-  const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: 'grant_type=client_credentials'
-  });
-  const tokenData = await tokenResponse.json();
-  const accessToken = tokenData.access_token;
-
-  const trackResponse = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-    headers: { 'Authorization': 'Bearer ' + accessToken }
-  });
-  if (!trackResponse.ok) return null;
-  const trackData = await trackResponse.json();
-  return {
-    title: trackData.name,
-    artist: trackData.artists.map(a => a.name).join(', ')
-  };
-}
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName } = interaction;
 
-  if (commandName === 'spotify') {
-    const url = interaction.options.getString('url');
+  if (commandName === 'play') {
+    const query = interaction.options.getString('query');
     const member = interaction.member;
     const voiceChannel = member.voice?.channel;
 
@@ -90,24 +61,18 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply('🎧 Devi essere in un canale vocale!');
     }
 
-    if (!url.includes('open.spotify.com/track/')) {
-      return interaction.reply('❌ Il link fornito non è valido o non è una traccia Spotify!');
-    }
-
     await interaction.deferReply();
 
     try {
-      const trackInfo = await getSpotifyTrackInfo(url);
-      if (!trackInfo) {
-        return interaction.editReply('❌ Impossibile recuperare le informazioni della traccia Spotify.');
+      // 1. Cerca la canzone su YouTube
+      const searchResult = await ytSearch(query);
+      if (!searchResult.videos || searchResult.videos.length === 0) {
+        return interaction.editReply('❌ Nessun risultato trovato su YouTube per la tua ricerca.');
       }
+      const video = searchResult.videos[0];
+      const ytUrl = video.url;
 
-      const ytResult = await ytSearch(`${trackInfo.title} ${trackInfo.artist}`);
-      if (!ytResult.videos || ytResult.videos.length === 0) {
-        return interaction.editReply('❌ Nessun risultato trovato su YouTube.');
-      }
-      const ytUrl = ytResult.videos[0].url;
-
+      // 2. Connetti al canale vocale
       if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
         connection = joinVoiceChannel({
           channelId: voiceChannel.id,
@@ -117,6 +82,7 @@ client.on('interactionCreate', async interaction => {
         await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
       }
 
+      // 3. Riproduci l'audio YouTube
       const stream = ytdl(ytUrl, { filter: 'audioonly', highWaterMark: 1 << 25 });
       const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
 
@@ -126,7 +92,7 @@ client.on('interactionCreate', async interaction => {
       connection.subscribe(player);
 
       player.once(AudioPlayerStatus.Playing, () => {
-        interaction.editReply(`🎶 Ora sto riproducendo: **${trackInfo.title}** di **${trackInfo.artist}**\n🔗 [YouTube](${ytUrl})`);
+        interaction.editReply(`🎶 Ora sto riproducendo: **${video.title}**\n🔗 [YouTube](${ytUrl})`);
       });
 
       player.on(AudioPlayerStatus.Idle, () => {
