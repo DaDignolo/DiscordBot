@@ -1,7 +1,9 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-const playdl = require('play-dl');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, entersState, VoiceConnectionStatus, StreamType } = require('@discordjs/voice');
+const fetch = require('node-fetch');
+const ytdl = require('ytdl-core');
+const ytSearch = require('yt-search');
 
 const client = new Client({
   intents: [
@@ -23,14 +25,11 @@ client.once('ready', async () => {
 
   const commands = [
     new SlashCommandBuilder()
-      .setName('join')
-      .setDescription('Fai entrare il bot nel tuo canale vocale'),
-    new SlashCommandBuilder()
-      .setName('play')
-      .setDescription('Riproduce una canzone da un link di YouTube')
+      .setName('spotify')
+      .setDescription('Riproduce una canzone da un link Spotify')
       .addStringOption(option =>
         option.setName('url')
-          .setDescription('Link del video YouTube')
+          .setDescription('Link della canzone Spotify')
           .setRequired(true)
       ),
   ].map(cmd => cmd.toJSON());
@@ -38,47 +37,51 @@ client.once('ready', async () => {
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
   try {
-    console.log('📡 Registro i comandi slash...');
     await rest.put(
       Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
       { body: commands }
     );
-    console.log('✅ Comandi registrati!');
+    console.log('✅ Comando /spotify registrato!');
   } catch (error) {
     console.error('❌ Errore nella registrazione comandi:', error);
   }
 });
+
+async function getSpotifyTrackInfo(spotifyUrl) {
+  const match = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
+  if (!match) return null;
+  const trackId = match[1];
+
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: 'grant_type=client_credentials'
+  });
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
+
+  const trackResponse = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+    headers: { 'Authorization': 'Bearer ' + accessToken }
+  });
+  if (!trackResponse.ok) return null;
+  const trackData = await trackResponse.json();
+  return {
+    title: trackData.name,
+    artist: trackData.artists.map(a => a.name).join(', ')
+  };
+}
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName } = interaction;
 
-  if (commandName === 'join') {
-    const member = interaction.member;
-    const voiceChannel = member.voice?.channel;
-
-    if (!voiceChannel) {
-      return interaction.reply('🎧 Devi essere in un canale vocale!');
-    }
-
-    try {
-      connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: interaction.guild.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-      });
-
-      await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
-
-      return interaction.reply(`✅ Sono entrato nel canale vocale: ${voiceChannel.name}`);
-    } catch (error) {
-      console.error('❌ Errore nell\'entrata nel canale vocale:', error);
-      return interaction.reply('❌ Non sono riuscito ad entrare nel canale vocale.');
-    }
-  }
-
-  if (commandName === 'play') {
+  if (commandName === 'spotify') {
     const url = interaction.options.getString('url');
     const member = interaction.member;
     const voiceChannel = member.voice?.channel;
@@ -87,11 +90,24 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply('🎧 Devi essere in un canale vocale!');
     }
 
-    if (!playdl.yt_validate(url)) {
-      return interaction.reply('❌ Il link fornito non è valido o non è un video YouTube!');
+    if (!url.includes('open.spotify.com/track/')) {
+      return interaction.reply('❌ Il link fornito non è valido o non è una traccia Spotify!');
     }
 
+    await interaction.deferReply();
+
     try {
+      const trackInfo = await getSpotifyTrackInfo(url);
+      if (!trackInfo) {
+        return interaction.editReply('❌ Impossibile recuperare le informazioni della traccia Spotify.');
+      }
+
+      const ytResult = await ytSearch(`${trackInfo.title} ${trackInfo.artist}`);
+      if (!ytResult.videos || ytResult.videos.length === 0) {
+        return interaction.editReply('❌ Nessun risultato trovato su YouTube.');
+      }
+      const ytUrl = ytResult.videos[0].url;
+
       if (!connection || connection.joinConfig.channelId !== voiceChannel.id) {
         connection = joinVoiceChannel({
           channelId: voiceChannel.id,
@@ -101,12 +117,8 @@ client.on('interactionCreate', async interaction => {
         await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
       }
 
-      // Ottieni lo stream audio da play-dl
-      const stream = await playdl.stream(url);
-
-      const resource = createAudioResource(stream.stream, {
-        inputType: stream.type
-      });
+      const stream = ytdl(ytUrl, { filter: 'audioonly', highWaterMark: 1 << 25 });
+      const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
 
       const player = createAudioPlayer();
       player.play(resource);
@@ -114,7 +126,7 @@ client.on('interactionCreate', async interaction => {
       connection.subscribe(player);
 
       player.once(AudioPlayerStatus.Playing, () => {
-        interaction.reply(`🎶 Ora sto riproducendo: <${url}>`);
+        interaction.editReply(`🎶 Ora sto riproducendo: **${trackInfo.title}** di **${trackInfo.artist}**\n🔗 [YouTube](${ytUrl})`);
       });
 
       player.on(AudioPlayerStatus.Idle, () => {
@@ -124,14 +136,14 @@ client.on('interactionCreate', async interaction => {
 
       player.on('error', error => {
         console.error('❌ Errore player:', error);
-        if (!interaction.replied) interaction.reply('❌ Errore durante la riproduzione del brano.');
+        if (!interaction.replied) interaction.editReply('❌ Errore durante la riproduzione del brano.');
         connection.destroy();
         connection = null;
       });
 
     } catch (error) {
       console.error('❌ Errore durante la riproduzione:', error);
-      return interaction.reply('❌ Si è verificato un errore durante la riproduzione del brano.');
+      return interaction.editReply('❌ Si è verificato un errore durante la riproduzione del brano.');
     }
   }
 });
