@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
-const ytdl = require('ytdl-core-discord');
+const playdl = require('play-dl');
 
 const client = new Client({
   intents: [
@@ -22,14 +22,18 @@ client.once('ready', async () => {
   console.log('✅ Bot è online!');
 
   const commands = [
-    new SlashCommandBuilder().setName('join').setDescription('Fai entrare il bot nel tuo canale vocale'),
+    new SlashCommandBuilder()
+      .setName('join')
+      .setDescription('Fai entrare il bot nel tuo canale vocale'),
     new SlashCommandBuilder()
       .setName('play')
       .setDescription('Riproduce una canzone da un link di YouTube')
       .addStringOption(option =>
-        option.setName('url').setDescription('Link del video YouTube').setRequired(true)
+        option.setName('url')
+          .setDescription('Link del video YouTube')
+          .setRequired(true)
       ),
-  ].map(command => command.toJSON());
+  ].map(cmd => cmd.toJSON());
 
   const rest = new REST({ version: '10' }).setToken(TOKEN);
 
@@ -40,8 +44,8 @@ client.once('ready', async () => {
       { body: commands }
     );
     console.log('✅ Comandi registrati!');
-  } catch (err) {
-    console.error('❌ Errore nella registrazione comandi:', err);
+  } catch (error) {
+    console.error('❌ Errore nella registrazione comandi:', error);
   }
 });
 
@@ -83,7 +87,7 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply('🎧 Devi essere in un canale vocale!');
     }
 
-    if (!ytdl.validateURL(url)) {
+    if (!playdl.yt_validate(url)) {
       return interaction.reply('❌ Il link fornito non è valido o non è un video YouTube!');
     }
 
@@ -97,8 +101,12 @@ client.on('interactionCreate', async interaction => {
         await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
       }
 
-      const stream = await ytdl(url, { filter: 'audioonly', highWaterMark: 1 << 25 });
-      const resource = createAudioResource(stream, { inputType: StreamType.Opus });
+      // Ottieni lo stream audio da play-dl
+      const stream = await playdl.stream(url);
+
+      const resource = createAudioResource(stream.stream, {
+        inputType: stream.type
+      });
 
       const player = createAudioPlayer();
       player.play(resource);
