@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, AudioResource, VoiceConnectionStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const ytdl = require('ytdl-core');
 
 const client = new Client({
@@ -84,15 +84,18 @@ client.on('interactionCreate', async interaction => {
         guildId: interaction.guild.id,
         adapterCreator: interaction.guild.voiceAdapterCreator,
       });
+      
+      const stream = ytdl(url, { filter: 'audioonly' })
+        .on('error', (err) => {
+          console.error('❌ Errore nel recupero del flusso audio:', err);
+          interaction.reply('❌ Non sono riuscito a recuperare il flusso audio dal video.');
+        });
 
-      const stream = ytdl(url, { filter: 'audioonly' });
       const resource = createAudioResource(stream);
-
       const player = createAudioPlayer();
       player.play(resource);
 
       connection.subscribe(player);
-
       player.on(AudioPlayerStatus.Playing, () => {
         interaction.reply(`🎶 Ora sto riproducendo: ${url}`);
       });
