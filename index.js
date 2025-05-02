@@ -98,9 +98,9 @@ client.on('interactionCreate', async interaction => {
   
       const res = await axios.get('https://www.cheapshark.com/api/1.0/deals', {
         params: {
-          storeID: 1,        // Steam
-          upperPrice: 0,     // Solo giochi gratis
-          pageSize: 5,       // Numero massimo di giochi da mostrare
+          storeID: 4,        
+          upperPrice: 0,     
+          pageSize: 1,       
           sortBy: 'Savings'
         }
       });
