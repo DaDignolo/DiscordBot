@@ -65,15 +65,15 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-      return interaction.reply({ content: '🚫 Non hai il permesso di bannare utenti!', ephemeral: true });
+      return interaction.reply({ content: 'Non hai il permesso di bannare utenti', ephemeral: true });
     }
 
     if (!member || !member.bannable) {
-      return interaction.reply('❌ Non posso bannare questo utente.');
+      return interaction.reply('Non posso bannare questo utente.');
     }
 
     await member.ban();
-    interaction.reply(`🔨 Utente **${user.tag}** è stato bannato.`);
+    interaction.reply(`Utente **${user.tag}** è stato bannato.`);
   }
 
   if (commandName === 'kick') {
@@ -81,34 +81,43 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
-      return interaction.reply({ content: '🚫 Non hai il permesso di espellere utenti!', ephemeral: true });
+      return interaction.reply({ content: 'Non hai il permesso di espellere utenti', ephemeral: true });
     }
 
     if (!member || !member.kickable) {
-      return interaction.reply('❌ Non posso espellere questo utente.');
+      return interaction.reply('Non posso espellere questo utente.');
     }
 
     await member.kick();
-    interaction.reply(`👢 Utente **${user.tag}** è stato espulso.`);
+    interaction.reply(`Utente **${user.tag}** è stato espulso.`);
   }
 
   if (commandName === 'freestuff') {
     await interaction.deferReply();
     try {
-      const res = await axios.get('https://www.reddit.com/r/FreeGameFindings.json');
-      const posts = res.data.data.children
-        .filter(post => !post.data.over_18)
-        .slice(0, 5)
-        .map(post => `🎁 [${post.data.title}](${post.data.url})`);
+      const res = await axios.get('https://www.cheapshark.com/api/1.0/deals', {
+        params: {
+          storeID: 1,        // Steam
+          upperPrice: 0,     // Solo giochi gratis
+          pageSize: 1,       // Numero massimo di giochi da mostrare
+          sortBy: 'Savings'
+        }
+      });
 
-      if (posts.length === 0) {
-        interaction.editReply('❌ Nessun gioco gratuito trovato al momento.');
+      const games = res.data;
+
+      if (games.length === 0) {
+        interaction.editReply('Nessun gioco gratuito trovato al momento.');
       } else {
-        interaction.editReply(`Ecco alcuni giochi gratuiti trovati su Reddit:\n\n${posts.join('\n')}`);
+        const reply = games.map(game => {
+          return `🎮 [${game.title}](${game.dealID ? `https://www.cheapshark.com/redirect?dealID=${game.dealID}` : game.steamAppID ? `https://store.steampowered.com/app/${game.steamAppID}` : '#'}) - **${game.storeID === "1" ? "Steam" : "Store"}**`;
+        }).join('\n');
+
+        interaction.editReply(`Ecco alcuni giochi gratuiti trovati:\n\n${reply}`);
       }
     } catch (error) {
       console.error(error);
-      interaction.editReply('❌ Errore nel recupero dei giochi gratuiti.');
+      interaction.editReply('Errore nel recupero dei giochi gratuiti.');
     }
   }
 });
