@@ -39,14 +39,14 @@ const commands = [
   new SlashCommandBuilder()
     .setName('freestuff')
     .setDescription('Mostra giochi gratis attuali'),
-    new SlashCommandBuilder()
-      .setName('disconnect')
-      .setDescription('Disconnette un utente dal canale vocale')
-      .addUserOption(option =>
-        option.setName('utente')
-        .setDescription('Utente da disconnettere')
-        .setRequired(true)
-      )
+  new SlashCommandBuilder()
+    .setName('disconnect')
+    .setDescription('Disconnette un utente dal canale vocale')
+    .addUserOption(option =>
+      option.setName('utente')
+      .setDescription('Utente da disconnettere')
+      .setRequired(true)
+    )
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -127,6 +127,22 @@ client.on('interactionCreate', async interaction => {
     } catch (error) {
       console.error(error);
       interaction.editReply('Errore nel recupero dei giochi gratuiti.');
+    }
+  }
+
+  if (commandName === 'disconnect') {
+    const user = interaction.options.getUser('utente');
+    const member = interaction.options.guild.member.cache.get(user.id);
+
+    if (!member || !member.voice.channel) {
+      return interaction.reply('Questo utente non è in un canale vocale.');
+    }
+
+    try {
+      await member.voice.disconnect();
+      interaction.reply('Utente **${user.tag}** disconnesso dal canale vocale.');
+    } catch (err) {
+      interaction.reply('Non posso disconnettere questo utente.');
     }
   }
 });
