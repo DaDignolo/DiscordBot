@@ -39,6 +39,14 @@ const commands = [
   new SlashCommandBuilder()
     .setName('freestuff')
     .setDescription('Mostra giochi gratis attuali'),
+    new SlashCommandBuilder()
+      .setName('disconnect')
+      .setDescription('Disconnette un utente dal canale vocale')
+      .addUserOption(option =>
+        option.setName('utente')
+        .setDescription('Utente da disconnettere')
+        .setRequired(true)
+      )
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
