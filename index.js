@@ -95,25 +95,25 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'freestuff') {
     try {
       await interaction.reply({ content: 'Sto cercando giochi gratuiti...' });
-  
+
       const res = await axios.get('https://www.cheapshark.com/api/1.0/deals', {
         params: {
-          storeID: 4,        
-          upperPrice: 0,     
-          pageSize: 1,       
+          storeID: 4,
+          upperPrice: 0,
+          pageSize: 1,
           sortBy: 'Savings'
         }
       });
-  
+
       const games = res.data;
-  
+
       if (games.length === 0) {
         interaction.editReply('Nessun gioco gratuito trovato al momento.');
       } else {
         const reply = games.map(game => {
           return `🎮 [${game.title}](${game.dealID ? `https://www.cheapshark.com/redirect?dealID=${game.dealID}` : game.steamAppID ? `https://store.steampowered.com/app/${game.steamAppID}` : '#'}) - **${game.storeID === "1" ? "Steam" : "Store"}**`;
         }).join('\n');
-  
+
         interaction.editReply(`Ecco alcuni giochi gratuiti trovati:\n\n${reply}`);
       }
     } catch (error) {
@@ -121,7 +121,15 @@ client.on('interactionCreate', async interaction => {
       interaction.editReply('Errore nel recupero dei giochi gratuiti.');
     }
   }
-  
+});
+
+// Risposta automatica
+client.on('messageCreate', message => {
+  if (message.author.bot) return;
+
+  if (message.content.toLowerCase() === 'Hi Honey') {
+    message.reply(`Hi ${message.author}`);
+  }
 });
 
 client.login(TOKEN);
