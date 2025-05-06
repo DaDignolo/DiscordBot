@@ -132,19 +132,20 @@ client.on('interactionCreate', async interaction => {
 
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
-    const member = interaction.options.guild.member.cache.get(user.id);
-
+    const member = interaction.guild.members.cache.get(user.id);
+  
     if (!member || !member.voice.channel) {
       return interaction.reply('Questo utente non è in un canale vocale.');
     }
-
+  
     try {
       await member.voice.disconnect();
-      interaction.reply('Utente **${user.tag}** disconnesso dal canale vocale.');
+      await interaction.reply(`Utente **${user.tag}** disconnesso dal canale vocale.`);
     } catch (err) {
-      interaction.reply('Non posso disconnettere questo utente.');
+      await interaction.reply('Non posso disconnettere questo utente.');
     }
   }
+  
 });
 
 // Risposta automatica
