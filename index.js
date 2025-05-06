@@ -127,7 +127,7 @@ client.on('interactionCreate', async interaction => {
 client.on('messageCreate', message => {
   if (message.author.bot) return;
 
-  if (message.content.toLowerCase() === 'Hi Honey') {
+  if (message.content.toLowerCase() === 'hi Honey') {
     message.reply(`Hi ${message.author}`);
   }
 });
