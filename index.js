@@ -128,7 +128,15 @@ client.on('messageCreate', message => {
   if (message.author.bot) return;
 
   if (message.content.toLowerCase() === 'hi honey') {
-    message.reply(`Hi ${message.author}`);
+    message.reply(`Hi ${message.author}, now bark for me`);
+  }
+});
+
+client.on('messageCreate', message => {
+  if (message.author.bot) return;
+
+  if (message.content.toLowerCase() === 'woof woof') {
+    message.reply(`Good boy`);
   }
 });
 
