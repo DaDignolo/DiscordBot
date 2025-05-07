@@ -1,5 +1,12 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, PermissionsBitField } = require('discord.js');
+const { 
+  Client, 
+  GatewayIntentBits, 
+  SlashCommandBuilder, 
+  REST, 
+  Routes, 
+  PermissionsBitField 
+} = require('discord.js');
 const axios = require('axios');
 
 const client = new Client({
@@ -16,10 +23,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-client.once('ready', () => {
-  console.log('✅ Bot è online!');
-});
-
+// DEFINIZIONE COMANDI CON PERMESSI
 const commands = [
   new SlashCommandBuilder()
     .setName('ban')
@@ -28,7 +32,9 @@ const commands = [
       option.setName('utente')
         .setDescription('Utente da bannare')
         .setRequired(true)
-    ),
+    )
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.BanMembers), // Solo chi può bannare
+
   new SlashCommandBuilder()
     .setName('kick')
     .setDescription('Espelli un utente')
@@ -36,18 +42,23 @@ const commands = [
       option.setName('utente')
         .setDescription('Utente da espellere')
         .setRequired(true)
-    ),
+    )
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.KickMembers), // Solo chi può espellere
+
   new SlashCommandBuilder()
     .setName('freestuff')
-    .setDescription('Mostra giochi gratis attuali'),
+    .setDescription('Mostra giochi gratis attuali')
+    .setDefaultMemberPermissions(0), // Solo amministratori
+
   new SlashCommandBuilder()
     .setName('disconnect')
     .setDescription('Disconnette un utente dal canale vocale')
     .addUserOption(option =>
       option.setName('utente')
-      .setDescription('Utente da disconnettere')
-      .setRequired(true)
+        .setDescription('Utente da disconnettere')
+        .setRequired(true)
     )
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.MoveMembers) // Solo chi può spostare membri nei canali vocali
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -63,6 +74,10 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
     console.error('❌ Errore nella registrazione comandi:', error);
   }
 })();
+
+client.once('ready', () => {
+  console.log('✅ Bot è online!');
+});
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -102,6 +117,10 @@ client.on('interactionCreate', async interaction => {
   }
 
   if (commandName === 'freestuff') {
+    // Solo amministratori (controllo extra)
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return interaction.reply({ content: 'Solo gli amministratori possono usare questo comando.', ephemeral: true });
+    }
     try {
       await interaction.reply({ content: 'Sto cercando giochi gratuiti...' });
 
@@ -134,11 +153,15 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
-  
+
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
+      return interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', ephemeral: true });
+    }
+
     if (!member || !member.voice.channel) {
       return interaction.reply('Questo utente non è in un canale vocale.');
     }
-  
+
     try {
       await member.voice.disconnect();
       await interaction.reply(`Utente **${user.tag}** disconnesso dal canale vocale.`);
@@ -146,7 +169,6 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply('Non posso disconnettere questo utente.');
     }
   }
-  
 });
 
 // Risposta automatica
@@ -156,11 +178,6 @@ client.on('messageCreate', message => {
   if (message.content.toLowerCase() === 'hi mommy') {
     message.reply(`Hi ${message.author}, now bark for me`);
   }
-});
-
-client.on('messageCreate', message => {
-  if (message.author.bot) return;
-
   if (message.content.toLowerCase() === 'woof woof') {
     message.reply(`Good boy`);
   }
