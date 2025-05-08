@@ -91,7 +91,7 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
 
     if (user.id === GOD_ID) {
-      return await interaction.reply({ content: 'Non puoi disconnettere questo utente.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Non puoi bannare il mio pet.', flags: MessageFlags.Ephemeral });
     }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
@@ -111,7 +111,7 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
 
     if (user.id === GOD_ID) {
-      return await interaction.reply({ content: 'Non puoi Kickare questo utente.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Non puoi Kickare il mio pet.', flags: MessageFlags.Ephemeral });
     }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
@@ -165,7 +165,7 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
   
     if (user.id === GOD_ID) {
-      return await interaction.reply({ content: 'Non puoi disconnettere questo utente.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Non puoi disconnettere il mio pet.', flags: MessageFlags.Ephemeral });
     }
   
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
