@@ -91,7 +91,7 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
 
     if (user.id === GOD_ID) {
-      return interaction.reply({ content: 'Non posso bannare il mio pet', ephemeral: true});
+      return await interaction.reply({ content: 'Non puoi disconnettere questo utente.', flags: MessageFlags.Ephemeral });
     }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
@@ -109,6 +109,10 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'kick') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
+
+    if (user.id === GOD_ID) {
+      return await interaction.reply({ content: 'Non puoi Kickare questo utente.', flags: MessageFlags.Ephemeral });
+    }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
       return interaction.reply({ content: 'Non hai il permesso di espellere utenti', ephemeral: true });
