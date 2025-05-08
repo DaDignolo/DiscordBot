@@ -22,6 +22,7 @@ const client = new Client({
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
+const GOD_ID = '183596970366074880';
 
 // DEFINIZIONE COMANDI CON PERMESSI
 const commands = [
@@ -33,7 +34,7 @@ const commands = [
         .setDescription('Utente da bannare')
         .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.BanMembers), // Solo chi può bannare
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.BanMembers),
 
   new SlashCommandBuilder()
     .setName('kick')
@@ -43,12 +44,12 @@ const commands = [
         .setDescription('Utente da espellere')
         .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.KickMembers), // Solo chi può espellere
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.KickMembers),
 
   new SlashCommandBuilder()
     .setName('freestuff')
     .setDescription('Mostra giochi gratis attuali')
-    .setDefaultMemberPermissions(0), // Solo amministratori
+    .setDefaultMemberPermissions(0),
 
   new SlashCommandBuilder()
     .setName('disconnect')
@@ -58,11 +59,11 @@ const commands = [
         .setDescription('Utente da disconnettere')
         .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.MoveMembers) // Solo chi può spostare membri nei canali vocali
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.MoveMembers)
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
-
+// Log di start
 (async () => {
   try {
     await rest.put(
@@ -87,6 +88,10 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'ban') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
+
+    if (user.id === GOD_ID) {
+      return interaction.reply({ content: 'Non posso bannare il mio pet', ephemeral: true});
+    }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
       return interaction.reply({ content: 'Non hai il permesso di bannare utenti', ephemeral: true });
@@ -153,6 +158,10 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
+
+    if (user.id === GOD_ID) {
+      return interaction.reply({ content: 'Non posso disconnettere il mio pet', ephemeral: true});
+    }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
       return interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', ephemeral: true });
