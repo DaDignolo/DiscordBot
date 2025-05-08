@@ -5,7 +5,8 @@ const {
   SlashCommandBuilder, 
   REST, 
   Routes, 
-  PermissionsBitField 
+  PermissionsBitField, 
+  MessageFlags
 } = require('discord.js');
 const axios = require('axios');
 
@@ -158,19 +159,19 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
-
+  
     if (user.id === GOD_ID) {
-      return interaction.reply({ content: 'Non posso disconnettere il mio pet', ephemeral: true});
+      return await interaction.reply({ content: 'Non puoi disconnettere questo utente.', flags: MessageFlags.Ephemeral });
     }
-
+  
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
-      return interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', ephemeral: true });
+      return await interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', flags: MessageFlags.Ephemeral });
     }
-
+  
     if (!member || !member.voice.channel) {
-      return interaction.reply('Questo utente non è in un canale vocale.');
+      return await interaction.reply({ content: 'Questo utente non è in un canale vocale.', flags: MessageFlags.Ephemeral });
     }
-
+  
     try {
       await member.voice.disconnect();
       await interaction.reply(`Utente **${user.tag}** disconnesso dal canale vocale.`);
@@ -178,6 +179,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply('Non posso disconnettere questo utente.');
     }
   }
+  
 });
 
 // Risposta automatica
