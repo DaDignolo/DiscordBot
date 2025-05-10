@@ -208,7 +208,7 @@ client.on('interactionCreate', async interaction => {
 
     try {
       const deleted = await interaction.channel.bulkDelete(amount, true);
-      await interaction.reply({ content: `Ho canellato ${deleted.size} messaggi.`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `Ho cancellato ${deleted.size} messaggi.`, flags: MessageFlags.Ephemeral });
     } catch (error) {
       console.error(error);
       await interaction.reply({ content: 'Errore nella cancellazione dei messaggi. Controlla che i messaggi non siano piú vecchi di 14 giorni', flags: MessageFlags.Ephemeral });
