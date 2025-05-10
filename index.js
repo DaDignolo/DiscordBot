@@ -20,12 +20,11 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates
   ]
 });
-// Variabili
+
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const GOD_ID = '183596970366074880';
-const LOGS_CHANNEL_ID = '1370898804651589712';
 
 // DEFINIZIONE COMANDI CON PERMESSI
 const commands = [
@@ -174,25 +173,24 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
-    const logChannel = interaction.guild.channels.cache.get(LOGS_CHANNEL_ID);
   
     if (user.id === GOD_ID) {
-      return await logChannel.send({ content: 'Non puoi disconnettere il mio pet.'});
+      return await interaction.reply({ content: 'Non puoi disconnettere il mio pet.', flags: MessageFlags.Ephemeral });
     }
   
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
-      return await logChannel.send({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.'});
+      return await interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', flags: MessageFlags.Ephemeral });
     }
   
     if (!member || !member.voice.channel) {
-      return await logChannel.send({ content: 'Questo utente non è in un canale vocale.'});
+      return await interaction.reply({ content: 'Questo utente non è in un canale vocale.', flags: MessageFlags.Ephemeral });
     }
   
     try {
       await member.voice.disconnect();
-      await logChannel.send(`Utente **${user.tag}** disconnesso dal canale vocale.`);
+      await interaction.reply(`Utente **${user.tag}** disconnesso dal canale vocale.`);
     } catch (err) {
-      await logChannel.send('Non posso disconnettere questo utente.');
+      await interaction.reply('Non posso disconnettere questo utente.');
     }
   }
 // ---------------------------------- Cancella messaggi dalle chat ----------------------------------
