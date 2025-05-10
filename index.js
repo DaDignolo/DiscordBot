@@ -20,11 +20,13 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates
   ]
 });
-
+// Variabili
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const GOD_ID = '183596970366074880';
+const LOGS_CHANNEL_ID = '1370898804651589712';
+const logChannel = interaction.guild.channels.cache.get(LOGS_CHANNEL_ID);
 
 // DEFINIZIONE COMANDI CON PERMESSI
 const commands = [
@@ -138,7 +140,6 @@ client.on('interactionCreate', async interaction => {
   }
 // ---------------------------------- Lista di giochi gratis ----------------------------------
   if (commandName === 'freestuff') {
-    // Solo amministratori (controllo extra)
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       return interaction.reply({ content: 'Solo gli amministratori possono usare questo comando.', ephemeral: true });
     }
@@ -189,7 +190,7 @@ client.on('interactionCreate', async interaction => {
   
     try {
       await member.voice.disconnect();
-      await interaction.reply(`Utente **${user.tag}** disconnesso dal canale vocale.`);
+      await logChannel.send(`Utente **${user.tag}** disconnesso dal canale vocale.`);
     } catch (err) {
       await interaction.reply('Non posso disconnettere questo utente.');
     }
