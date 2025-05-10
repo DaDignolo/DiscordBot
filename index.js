@@ -67,7 +67,7 @@ const commands = [
     .setName('clear')
     .setDescription('Cancella messaggi nel canale')
     .addIntegerOption(option =>
-      option.setName('Numero')
+      option.setName('numero')
       .setDescription('Quanti messaggi vuoi cancellare (max 100)')
       .setRequired(true)
     )
@@ -96,7 +96,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName } = interaction;
-
+// ---------------------------------- Ban dal discord ----------------------------------
   if (commandName === 'ban') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
@@ -116,7 +116,7 @@ client.on('interactionCreate', async interaction => {
     await member.ban();
     interaction.reply(`Utente **${user.tag}** è stato bannato.`);
   }
-
+// ---------------------------------- Kick dal discord ----------------------------------
   if (commandName === 'kick') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
@@ -136,7 +136,7 @@ client.on('interactionCreate', async interaction => {
     await member.kick();
     interaction.reply(`Utente **${user.tag}** è stato espulso.`);
   }
-
+// ---------------------------------- Lista di giochi gratis ----------------------------------
   if (commandName === 'freestuff') {
     // Solo amministratori (controllo extra)
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
@@ -170,7 +170,7 @@ client.on('interactionCreate', async interaction => {
       interaction.editReply('Errore nel recupero dei giochi gratuiti.');
     }
   }
-
+// ---------------------------------- Disconnette dal canale ----------------------------------
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
@@ -194,7 +194,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply('Non posso disconnettere questo utente.');
     }
   }
-
+// ---------------------------------- Cancella messaggi dalle chat ----------------------------------
   if (commandName === 'clear') {
     const amount = interaction.options.getInteger('numero');
 
