@@ -60,7 +60,17 @@ const commands = [
         .setDescription('Utente da disconnettere')
         .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.MoveMembers)
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.MoveMembers),
+    
+  new SlashCommandBuilder()
+    .setName('clear')
+    .setDescription('Cancella messaggi nel canale')
+    .addIntegerOption(option =>
+      option.setName('Numero')
+      .setDescription('Quanti messaggi vuoi cancellare (max 100)')
+      .setRequired(true)
+    )
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageMessages)  
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
