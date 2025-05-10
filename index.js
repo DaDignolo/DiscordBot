@@ -177,22 +177,22 @@ client.on('interactionCreate', async interaction => {
     const logChannel = interaction.guild.channels.cache.get(LOGS_CHANNEL_ID);
   
     if (user.id === GOD_ID) {
-      return await interaction.reply({ content: 'Non puoi disconnettere il mio pet.', flags: MessageFlags.Ephemeral });
+      return await logChannel.send({ content: 'Non puoi disconnettere il mio pet.'});
     }
   
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
-      return await interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', flags: MessageFlags.Ephemeral });
+      return await logChannel.send({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.'});
     }
   
     if (!member || !member.voice.channel) {
-      return await interaction.reply({ content: 'Questo utente non è in un canale vocale.', flags: MessageFlags.Ephemeral });
+      return await logChannel.send({ content: 'Questo utente non è in un canale vocale.'});
     }
   
     try {
       await member.voice.disconnect();
       await logChannel.send(`Utente **${user.tag}** disconnesso dal canale vocale.`);
     } catch (err) {
-      await interaction.reply('Non posso disconnettere questo utente.');
+      await logChannel.send('Non posso disconnettere questo utente.');
     }
   }
 // ---------------------------------- Cancella messaggi dalle chat ----------------------------------
