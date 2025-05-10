@@ -9,6 +9,7 @@ const {
   MessageFlags
 } = require('discord.js');
 const axios = require('axios');
+const { Message } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -61,7 +62,7 @@ const commands = [
         .setRequired(true)
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.MoveMembers),
-    
+
   new SlashCommandBuilder()
     .setName('clear')
     .setDescription('Cancella messaggi nel canale')
@@ -191,6 +192,26 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply(`Utente **${user.tag}** disconnesso dal canale vocale.`);
     } catch (err) {
       await interaction.reply('Non posso disconnettere questo utente.');
+    }
+  }
+
+  if (commandName === 'clear') {
+    const amount = interaction.options.getInteger('numero');
+
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+      return interaction.reply({ content: 'Non hai il permesso di cancellare i messaggi.', flags: MessageFlags.Ephemeral });
+    }
+
+    if (amount < 1 || amount > 100) {
+      return interaction.reply({ content: 'Devi specificare un numero tra 1 e 100.', flags: MessageFlags.Ephemeral });
+    }
+
+    try {
+      const deleted = await interaction.channel.bulkDelete(amount, true);
+      await interaction.reply({ content: `Ho canellato ${deleted.size} messaggi.`, flags: MessageFlags.Ephemeral });
+    } catch (error) {
+      console.error(error);
+      await interaction.reply({ content: 'Errore nella cancellazione dei messaggi. Controlla che i messaggi non siano piú vecchi di 14 giorni', flags: MessageFlags.Ephemeral });
     }
   }
   
