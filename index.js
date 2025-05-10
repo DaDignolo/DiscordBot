@@ -26,7 +26,6 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const GOD_ID = '183596970366074880';
 const LOGS_CHANNEL_ID = '1370898804651589712';
-const logChannel = interaction.guild.channels.cache.get(LOGS_CHANNEL_ID);
 
 // DEFINIZIONE COMANDI CON PERMESSI
 const commands = [
@@ -175,6 +174,7 @@ client.on('interactionCreate', async interaction => {
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
+    const logChannel = interaction.guild.channels.cache.get(LOGS_CHANNEL_ID);
   
     if (user.id === GOD_ID) {
       return await interaction.reply({ content: 'Non puoi disconnettere il mio pet.', flags: MessageFlags.Ephemeral });
