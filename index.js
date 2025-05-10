@@ -6,7 +6,8 @@ const {
   REST, 
   Routes, 
   PermissionsBitField, 
-  MessageFlags
+  MessageFlags,
+  MessageActivityType
 } = require('discord.js');
 const axios = require('axios');
 const { Message } = require('discord.js');
@@ -25,6 +26,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 const GOD_ID = '183596970366074880';
+const SPAM_CHANNEL_ID = '1370906498414411796';
 
 // DEFINIZIONE COMANDI CON PERMESSI
 const commands = [
@@ -71,7 +73,21 @@ const commands = [
       .setDescription('Quanti messaggi vuoi cancellare (max 100)')
       .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageMessages)  
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageMessages),
+
+  new SlashCommandBuilder()
+    .setName('spam')
+    .setDescription('Spam')
+    .addStringOption(option =>
+      option.setName('messaggio')
+      .setDescription('Messaggio ad spammare')
+      .setRequired(true)
+    )
+    .addIntegerOption(option =>
+      option.setName('numero')
+      .setDescription('Qunte colte vuoi spammare')
+      .setRequired(true)
+    )
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -211,6 +227,27 @@ client.on('interactionCreate', async interaction => {
     } catch (error) {
       console.error(error);
       await interaction.reply({ content: 'Errore nella cancellazione dei messaggi. Controlla che i messaggi non siano piú vecchi di 14 giorni', flags: MessageFlags.Ephemeral });
+    }
+  }
+
+  // TOP SPAM
+  if (commandName === 'spam') {
+    const spamchannel = interaction.guild.channels.cache.get(SPAM_CHANNEL_ID);
+
+    if (!spamchannel) {
+      return await interaction.reply({ content: 'Canale non trovato', flags: MessageFlags.Ephemeral });
+    }
+
+    const messagio = interaction.options.getString('messaggio');
+    let volte = interaction.options.getInteger('volte');
+
+    if (volte > 50) volte = 50;
+
+    await interaction.reply({ content: `Sto spammando il messagio ${volte}`})
+
+    for (let i = 0; i < volte; i++) {
+      await spamchannel.send(messagio);
+      await new Promise(res => setTimeout(res, 700));
     }
   }
   
