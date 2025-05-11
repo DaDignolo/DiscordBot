@@ -80,12 +80,12 @@ const commands = [
     .setDescription('Spam')
     .addStringOption(option =>
       option.setName('messaggio')
-      .setDescription('Messaggio ad spammare')
+      .setDescription('Messaggio da spammare')
       .setRequired(true)
     )
     .addIntegerOption(option =>
       option.setName('numero')
-      .setDescription('Qunte colte vuoi spammare')
+      .setDescription('Quante volte vuoi spammare')
       .setRequired(true)
     )
 ].map(command => command.toJSON());
@@ -238,15 +238,15 @@ client.on('interactionCreate', async interaction => {
       return await interaction.reply({ content: 'Canale non trovato', flags: MessageFlags.Ephemeral });
     }
 
-    const messagio = interaction.options.getString('messaggio');
-    let volte = interaction.options.getInteger('volte');
+    const messaggio = interaction.options.getString('messaggio');
+    let volte = interaction.options.getInteger('numero');
 
     if (volte > 50) volte = 50;
 
-    await interaction.reply({ content: `Sto spammando il messagio ${volte}`})
+    await interaction.reply({ content: `Sto spammando il messaggio ${messaggio}, ${volte} volte`})
 
     for (let i = 0; i < volte; i++) {
-      await spamchannel.send(messagio);
+      await spamchannel.send(messaggio);
       await new Promise(res => setTimeout(res, 700));
     }
   }
