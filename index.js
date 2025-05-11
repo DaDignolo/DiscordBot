@@ -244,7 +244,7 @@ client.on('interactionCreate', async interaction => {
 
     if (volte > 50) volte = 50;
 
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `Sto spammando il messaggio ${messaggio}, ${volte} volte`})
 
     for (let i = 0; i < volte; i++) {
       await spamchannel.send(messaggio);
