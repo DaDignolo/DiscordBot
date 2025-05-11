@@ -247,7 +247,7 @@ client.on('interactionCreate', async interaction => {
 
     for (let i = 0; i < volte; i++) {
       await spamchannel.send(messaggio);
-      await new Promise(res => setTimeout(res, 200));
+      await new Promise(res => setTimeout(res, 700));
     }
   }
   
