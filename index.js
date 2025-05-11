@@ -75,20 +75,19 @@ const commands = [
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageMessages),
 
-  new SlashCommandBuilder()
-    .setName('spam')
-    .setDescription('Spam')
-    .addStringOption(option =>
-      option.setName('messaggio')
-      .setDescription('Messaggio da spammare')
-      .setRequired(true)
-    )
-    .addIntegerOption(option =>
-      option.setName('numero')
-      .setDescription('Quante volte vuoi spammare')
-      .setRequired(true)
-    )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageChannels),
+  // new SlashCommandBuilder()
+  //   .setName('spam')
+  //   .setDescription('Spam')
+  //   .addStringOption(option =>
+  //     option.setName('messaggio')
+  //     .setDescription('Messaggio da spammare')
+  //     .setRequired(true)
+  //   )
+  //   .addIntegerOption(option =>
+  //     option.setName('numero')
+  //     .setDescription('Quante volte vuoi spammare')
+  //     .setRequired(true)
+  //   )
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -232,34 +231,34 @@ client.on('interactionCreate', async interaction => {
   }
 
   // TOP SPAM
-  if (commandName === 'spam') {
-    const spamchannel = interaction.guild.channels.cache.get(SPAM_CHANNEL_ID);
-    const requiredRole = 'Spam Certified';
-    const member = interaction.member;
+  // if (commandName === 'spam') {
+  //   const spamchannel = interaction.guild.channels.cache.get(SPAM_CHANNEL_ID);
+  //   const requiredRole = 'Spam Certified';
+  //   const member = interaction.member;
 
-    const hasRole = member.roles.cache.some(role => role.name === requiredRole);
+  //   const hasRole = member.roles.cache.some(role => role.name === requiredRole);
 
-    if (!hasRole) {
-      await interaction.reply({ content: 'Non hai il permesso di usare questo comando', flags: MessageFlags.Ephemeral });
-      return;
-    }
+  //   if (!hasRole) {
+  //     await interaction.reply({ content: 'Non hai il permesso di usare questo comando', flags: MessageFlags.Ephemeral });
+  //     return;
+  //   }
 
-    if (!spamchannel) {
-      return await interaction.reply({ content: 'Canale non trovato', flags: MessageFlags.Ephemeral });
-    }
+  //   if (!spamchannel) {
+  //     return await interaction.reply({ content: 'Canale non trovato', flags: MessageFlags.Ephemeral });
+  //   }
 
-    const messaggio = interaction.options.getString('messaggio');
-    let volte = interaction.options.getInteger('numero');
+  //   const messaggio = interaction.options.getString('messaggio');
+  //   let volte = interaction.options.getInteger('numero');
 
-    if (volte > 50) volte = 50;
+  //   if (volte > 50) volte = 50;
 
-    await interaction.reply({ content: `Sto spammando il messaggio ${messaggio}, ${volte} volte`, flags: MessageFlags.Ephemeral })
+  //   await interaction.reply({ content: `Sto spammando il messaggio ${messaggio}, ${volte} volte`, flags: MessageFlags.Ephemeral })
 
-    for (let i = 0; i < volte; i++) {
-      await spamchannel.send(messaggio);
-      await new Promise(res => setTimeout(res, 700));
-    }
-  }
+  //   for (let i = 0; i < volte; i++) {
+  //     await spamchannel.send(messaggio);
+  //     await new Promise(res => setTimeout(res, 700));
+  //   }
+  // }
   
 });
 
