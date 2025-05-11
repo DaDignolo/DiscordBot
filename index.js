@@ -73,7 +73,7 @@ const commands = [
       .setDescription('Quanti messaggi vuoi cancellare (max 100)')
       .setRequired(true)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageMessages),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageMessages)
 
   // new SlashCommandBuilder()
   //   .setName('spam')
