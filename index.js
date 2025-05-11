@@ -88,6 +88,7 @@ const commands = [
       .setDescription('Quante volte vuoi spammare')
       .setRequired(true)
     )
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageChannels),
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -243,7 +244,7 @@ client.on('interactionCreate', async interaction => {
 
     if (volte > 50) volte = 50;
 
-    await interaction.reply({ content: `Sto spammando il messaggio ${messaggio}, ${volte} volte`})
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     for (let i = 0; i < volte; i++) {
       await spamchannel.send(messaggio);
