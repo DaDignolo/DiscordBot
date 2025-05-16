@@ -154,37 +154,37 @@ client.on('interactionCreate', async interaction => {
   }
 // ---------------------------------- Lista di giochi gratis ----------------------------------
   if (commandName === 'freestuff') {
-    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-      return interaction.reply({ content: 'Solo gli amministratori possono usare questo comando.', ephemeral: true });
-    }
-    try {
-      await interaction.reply({ content: 'Sto cercando giochi gratuiti...' });
-
-      const res = await axios.get('https://www.cheapshark.com/api/1.0/deals', {
-        params: {
-          storeID: 4,
-          upperPrice: 0,
-          pageSize: 1,
-          sortBy: 'Savings'
-        }
-      });
-
-      const games = res.data;
-
-      if (games.length === 0) {
-        interaction.editReply('Nessun gioco gratuito trovato al momento.');
-      } else {
-        const reply = games.map(game => {
-          return `🎮 [${game.title}](${game.dealID ? `https://www.cheapshark.com/redirect?dealID=${game.dealID}` : game.steamAppID ? `https://store.steampowered.com/app/${game.steamAppID}` : '#'}) - **${game.storeID === "1" ? "Steam" : "Store"}**`;
-        }).join('\n');
-
-        interaction.editReply(`Ecco alcuni giochi gratuiti trovati:\n\n${reply}`);
-      }
-    } catch (error) {
-      console.error(error);
-      interaction.editReply('Errore nel recupero dei giochi gratuiti.');
-    }
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    return interaction.reply({ content: 'Solo gli amministratori possono usare questo comando.', ephemeral: true });
   }
+
+  try {
+    await interaction.reply({ content: 'Sto cercando giochi gratuiti attualmente disponibili...' });
+
+    const res = await axios.get('https://www.gamerpower.com/api/giveaways', {
+      params: {
+        platform: 'pc',
+        type: 'game'
+      }
+    });
+
+    const games = res.data.slice(0, 5); // Mostra i primi 5 giochi trovati
+
+    if (games.length === 0) {
+      interaction.editReply('Nessun gioco gratuito trovato al momento.');
+    } else {
+      const reply = games.map(game => {
+        return `🎁 [${game.title}](${game.open_giveaway_url}) - **${game.worth}** - *${game.platforms}*`;
+      }).join('\n');
+
+      interaction.editReply(`Ecco alcune offerte gratuite attive:\n\n${reply}`);
+    }
+  } catch (error) {
+    console.error(error);
+    interaction.editReply('Errore nel recupero dei giochi gratuiti.');
+  }
+}
+
 // ---------------------------------- Disconnette dal canale ----------------------------------
   if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
