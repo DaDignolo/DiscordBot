@@ -87,7 +87,11 @@ const commands = [
       option.setName('numero')
       .setDescription('Quante volte vuoi spammare')
       .setRequired(true)
-    )
+    ),
+
+  new SlashCommandBuilder()
+    .setName('ogur')
+    .setDescription('On god you retarded')
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -228,6 +232,10 @@ client.on('interactionCreate', async interaction => {
       console.error(error);
       await interaction.reply({ content: 'Errore nella cancellazione dei messaggi. Controlla che i messaggi non siano piú vecchi di 14 giorni', flags: MessageFlags.Ephemeral });
     }
+  }
+// ---------------------------------- On god u retarded ----------------------------------
+  if (commandName === 'ogur') {
+    await interaction.reply(':point_right::pray::index_pointing_at_the_viewer::zany_face:');
   }
 
   // TOP SPAM
