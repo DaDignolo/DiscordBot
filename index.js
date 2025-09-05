@@ -1,4 +1,20 @@
 require('dotenv').config();
+const { Manager } = require('erela.js');
+
+const manager = new Manager({
+  nodes: [
+    {
+      host: 'YOUR_LAVALINK_HOST',
+      port: 2333,
+      password: process.env.PASS_LAVA
+    }
+  ],
+  send(id, payload) {
+    const guild = client.guilds.cache.get(id);
+    if (guild) guild.shard.send(payload);
+  }
+});
+
 const { 
   Client, 
   GatewayIntentBits, 
