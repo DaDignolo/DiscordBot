@@ -33,7 +33,6 @@ const manager = new Manager({
       host: 'lavalink-pmh4.onrender.com',
       port: 443,
       password: process.env.PASS_LAVA,
-      identifier: 'render-node',
       secure: true
     }
   ],
@@ -133,7 +132,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-client.once('clientReady', () => {
+client.once('ready', () => {
   console.log('✅ Client ready – initializing Lavalink');
   manager.init(client.user.id);
 });
