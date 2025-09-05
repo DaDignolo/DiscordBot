@@ -311,15 +311,14 @@ client.on('interactionCreate', async interaction => {
 
   // New slash command: /play
   if (commandName === 'play') {
+  try {
     const query = interaction.options.getString('query');
     const voiceChannel = interaction.member.voice.channel;
-
     if (!voiceChannel) {
-      return interaction.reply({ content: 'Devi essere in un canale vocale per riprodurre musica!', ephemeral: true });
+      return await interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
     }
 
     let player = manager.players.get(interaction.guild.id);
-
     if (!player) {
       player = manager.create({
         guild: interaction.guild.id,
@@ -327,33 +326,35 @@ client.on('interactionCreate', async interaction => {
         textChannel: interaction.channel.id,
         selfDeafen: true
       });
-    } else {
-      if (player.voiceChannel !== voiceChannel.id) player.setVoiceChannel(voiceChannel.id);
-      player.setTextChannel(interaction.channel.id);
     }
 
     if (player.state !== 'CONNECTED') await player.connect();
 
-    await interaction.deferReply();
-
     const res = await manager.search(query, interaction.user);
-
     if (res.loadType === 'NO_MATCHES') {
-      return interaction.editReply(`Nessun risultato trovato per **${query}**.`);
-    } else if (res.loadType === 'LOAD_FAILED') {
-      return interaction.editReply('Errore nel caricamento del brano, riprova più tardi.');
+      return await interaction.reply({ content: `No results found for \`${query}\`` });
+    }
+
+    if (res.loadType === 'LOAD_FAILED') {
+      return await interaction.reply({ content: 'Track loading failed. Try again later.' });
     }
 
     if (res.loadType === 'PLAYLIST_LOADED') {
       player.queue.add(res.tracks);
-      await interaction.editReply(`Playlist **${res.playlist.name}** aggiunta alla coda!`);
+      await interaction.reply(`Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
     } else {
       player.queue.add(res.tracks[0]);
-      await interaction.editReply(`Brano **${res.tracks[0].title}** aggiunto alla coda!`);
+      await interaction.reply(`Track **${res.tracks[0].title}** added to queue.`);
     }
 
-    if (!player.playing && !player.paused) player.play();
+    if (!player.playing && !player.paused && player.queue.length) player.play();
+
+  } catch (error) {
+    console.error('Error in /play command:', error);
+    await interaction.reply({ content: 'An error occurred while trying to play the track.', ephemeral: true });
   }
+}
+
 });
 
 client.login(TOKEN);
