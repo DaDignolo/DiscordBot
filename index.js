@@ -317,54 +317,72 @@ client.on('interactionCreate', async interaction => {
   }
 
   // Play command fixed with deferReply and editReply
-  else if (commandName === 'play') {
-    try {
-      await interaction.deferReply();
+  if (commandName === 'play') {
+  try {
+    const query = interaction.options.getString('query');
+    const voiceChannel = interaction.member.voice.channel;
 
-      const query = interaction.options.getString('query');
-      const voiceChannel = interaction.member.voice.channel;
-      if (!voiceChannel) {
-        return await interaction.editReply({ content: 'You must be in a voice channel!' });
+    if (!voiceChannel) {
+      return await interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
+    }
+
+    // Defer reply as early as possible
+    await interaction.deferReply();
+
+    if (manager.nodes.size === 0 || !manager.nodes.first().connected) {
+      return await interaction.editReply('❌ Lavalink node is not connected.');
+    }
+
+    let player = manager.players.get(interaction.guild.id);
+    if (!player) {
+      player = manager.create({
+        guild: interaction.guild.id,
+        voiceChannel: voiceChannel.id,
+        textChannel: interaction.channel.id,
+        selfDeafen: true,
+      });
+    }
+
+    if (player.state !== 'CONNECTED') await player.connect();
+
+    const res = await manager.search(query, interaction.user);
+
+    if (res.loadType === 'NO_MATCHES') {
+      return await interaction.editReply(`❌ No results found for \`${query}\`.`);
+    }
+
+    if (res.loadType === 'LOAD_FAILED') {
+      return await interaction.editReply('❌ Failed to load the track.');
+    }
+
+    if (res.loadType === 'PLAYLIST_LOADED') {
+      player.queue.add(res.tracks);
+      await interaction.editReply(`✅ Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
+    } else {
+      player.queue.add(res.tracks[0]);
+      await interaction.editReply(`✅ Track **${res.tracks[0].title}** added to queue.`);
+    }
+
+    if (!player.playing && !player.paused && player.queue.length) player.play();
+
+  } catch (error) {
+    console.error('Error in /play command:', error);
+    if (!interaction.replied) {
+      try {
+        await interaction.reply({ content: '❌ An error occurred.', ephemeral: true });
+      } catch (e) {
+        console.error('Failed to send fallback error reply:', e);
       }
-
-      let player = manager.players.get(interaction.guild.id);
-      if (!player) {
-        player = manager.create({
-          guild: interaction.guild.id,
-          voiceChannel: voiceChannel.id,
-          textChannel: interaction.channel.id,
-          selfDeafen: true
-        });
-      }
-
-      if (player.state !== 'CONNECTED') await player.connect();
-
-      const res = await manager.search(query, interaction.user);
-      if (res.loadType === 'NO_MATCHES') {
-        return await interaction.editReply({ content: `No results found for \`${query}\`` });
-      }
-
-      if (res.loadType === 'LOAD_FAILED') {
-        return await interaction.editReply({ content: 'Track loading failed. Try again later.' });
-      }
-
-      if (res.loadType === 'PLAYLIST_LOADED') {
-        player.queue.add(res.tracks);
-        await interaction.editReply(`Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
-      } else {
-        player.queue.add(res.tracks[0]);
-        await interaction.editReply(`Track **${res.tracks[0].title}** added to queue.`);
-      }
-
-      if (!player.playing && !player.paused && player.queue.length) player.play();
-
-    } catch (error) {
-      console.error('Error in /play command:', error);
-      if (!interaction.replied) {
-        await interaction.editReply({ content: 'An error occurred while trying to play the track.' });
+    } else {
+      try {
+        await interaction.editReply('❌ An error occurred while playing the track.');
+      } catch (e) {
+        console.error('Failed to edit reply:', e);
       }
     }
   }
+}
+
 });
 
 client.login(TOKEN);
