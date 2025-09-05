@@ -132,9 +132,14 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 })();
 
 client.once('ready', () => {
-  console.log('✅ Client ready – initializing Lavalink');
+  console.log('Client ready');
   manager.init(client.user.id);
 });
+
+manager.on('clientReady', (player) => {
+  console.log(`Lavalink node ready for guild ${player.guild}`);
+});
+
 
 // Lavalink events
 manager.on('nodeConnect', node => {
