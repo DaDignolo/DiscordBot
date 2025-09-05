@@ -6,8 +6,7 @@ const {
   SlashCommandBuilder, 
   REST, 
   Routes, 
-  PermissionsBitField, 
-  MessageFlags
+  PermissionsBitField 
 } = require('discord.js');
 const axios = require('axios');
 
@@ -132,14 +131,14 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-client.once('clientReady', () => {
+client.once('ready', () => {
   console.log('✅ Client ready – initializing Lavalink');
   manager.init(client.user.id);
 });
 
 // Lavalink events
 manager.on('nodeConnect', node => {
-  console.log(`Node ${node.options.identifier} connected`);
+  console.log(`Lavalink node "${node.options.identifier}" connected.`);
 });
 
 manager.on('trackStart', (player, track) => {
@@ -153,23 +152,15 @@ manager.on('queueEnd', player => {
   player.destroy();
 });
 
-manager.on('nodeConnect', node => {
-  console.log(`Lavalink node "${node.options.identifier}" connected.`);
-});
-
 manager.on('nodeError', (node, error) => {
   console.error(`Lavalink node "${node.options.identifier}" encountered error: ${error.message}`);
 });
-
-
 
 // Handle slash commands
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   const { commandName } = interaction;
-
-  // Your existing command handlers...
 
   if (commandName === 'ban') {
     const user = interaction.options.getUser('utente');
@@ -191,7 +182,7 @@ client.on('interactionCreate', async interaction => {
     interaction.reply(`Utente **${user.tag}** è stato bannato.`);
   }
 
-  if (commandName === 'kick') {
+  else if (commandName === 'kick') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
 
@@ -211,7 +202,7 @@ client.on('interactionCreate', async interaction => {
     interaction.reply(`Utente **${user.tag}** è stato espulso.`);
   }
 
-  if (commandName === 'freestuff') {
+  else if (commandName === 'freestuff') {
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
       return interaction.reply({ content: 'Solo gli amministratori possono usare questo comando.', ephemeral: true });
     }
@@ -243,7 +234,7 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  if (commandName === 'disconnect') {
+  else if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
   
@@ -267,7 +258,7 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  if (commandName === 'clear') {
+  else if (commandName === 'clear') {
     const amount = interaction.options.getInteger('numero');
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
@@ -287,11 +278,11 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  if (commandName === 'ogur') {
+  else if (commandName === 'ogur') {
     await interaction.reply(':point_right::pray::index_pointing_at_the_viewer::zany_face:');
   }
 
-  if (commandName === 'spam') {
+  else if (commandName === 'spam') {
     const spamchannel = interaction.guild.channels.cache.get(SPAM_CHANNEL_ID);
     const requiredRole = 'Spam Certified';
     const member = interaction.member;
@@ -320,52 +311,55 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // New slash command: /play
-  if (commandName === 'play') {
-  try {
-    const query = interaction.options.getString('query');
-    const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) {
-      return await interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
+  // Play command fixed with deferReply and editReply
+  else if (commandName === 'play') {
+    try {
+      await interaction.deferReply();
+
+      const query = interaction.options.getString('query');
+      const voiceChannel = interaction.member.voice.channel;
+      if (!voiceChannel) {
+        return await interaction.editReply({ content: 'You must be in a voice channel!' });
+      }
+
+      let player = manager.players.get(interaction.guild.id);
+      if (!player) {
+        player = manager.create({
+          guild: interaction.guild.id,
+          voiceChannel: voiceChannel.id,
+          textChannel: interaction.channel.id,
+          selfDeafen: true
+        });
+      }
+
+      if (player.state !== 'CONNECTED') await player.connect();
+
+      const res = await manager.search(query, interaction.user);
+      if (res.loadType === 'NO_MATCHES') {
+        return await interaction.editReply({ content: `No results found for \`${query}\`` });
+      }
+
+      if (res.loadType === 'LOAD_FAILED') {
+        return await interaction.editReply({ content: 'Track loading failed. Try again later.' });
+      }
+
+      if (res.loadType === 'PLAYLIST_LOADED') {
+        player.queue.add(res.tracks);
+        await interaction.editReply(`Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
+      } else {
+        player.queue.add(res.tracks[0]);
+        await interaction.editReply(`Track **${res.tracks[0].title}** added to queue.`);
+      }
+
+      if (!player.playing && !player.paused && player.queue.length) player.play();
+
+    } catch (error) {
+      console.error('Error in /play command:', error);
+      if (!interaction.replied) {
+        await interaction.editReply({ content: 'An error occurred while trying to play the track.' });
+      }
     }
-
-    let player = manager.players.get(interaction.guild.id);
-    if (!player) {
-      player = manager.create({
-        guild: interaction.guild.id,
-        voiceChannel: voiceChannel.id,
-        textChannel: interaction.channel.id,
-        selfDeafen: true
-      });
-    }
-
-    if (player.state !== 'CONNECTED') await player.connect();
-
-    const res = await manager.search(query, interaction.user);
-    if (res.loadType === 'NO_MATCHES') {
-      return await interaction.reply({ content: `No results found for \`${query}\`` });
-    }
-
-    if (res.loadType === 'LOAD_FAILED') {
-      return await interaction.reply({ content: 'Track loading failed. Try again later.' });
-    }
-
-    if (res.loadType === 'PLAYLIST_LOADED') {
-      player.queue.add(res.tracks);
-      await interaction.reply(`Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
-    } else {
-      player.queue.add(res.tracks[0]);
-      await interaction.reply(`Track **${res.tracks[0].title}** added to queue.`);
-    }
-
-    if (!player.playing && !player.paused && player.queue.length) player.play();
-
-  } catch (error) {
-    console.error('Error in /play command:', error);
-    await interaction.reply({ content: 'An error occurred while trying to play the track.', ephemeral: true });
   }
-}
-
 });
 
 client.login(TOKEN);
