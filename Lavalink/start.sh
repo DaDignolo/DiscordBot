@@ -1,16 +1,10 @@
 #!/bin/bash
 
-echo "Checking for Lavalink.jar..."
-
+# Download Lavalink.jar if it doesn't exist
 if [ ! -f Lavalink.jar ]; then
-  echo "⬇Downloading Lavalink.jar..."
+  echo "Downloading Lavalink.jar..."
   wget https://github.com/freyacodes/Lavalink/releases/latest/download/Lavalink.jar
 fi
 
 echo "Starting Lavalink..."
-java -jar Lavalink.jar &
-
-sleep 3
-
-echo "Starting Discord bot..."
-node index.js
+java -jar Lavalink.jar

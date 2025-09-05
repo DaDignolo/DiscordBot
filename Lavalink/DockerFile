@@ -1,0 +1,16 @@
+FROM openjdk:17-slim
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY application.yml .
+
+RUN wget https://github.com/freyacodes/Lavalink/releases/latest/download/Lavalink.jar
+
+EXPOSE 2333
+
+CMD ["java", "-jar", "Lavalink.jar"]
