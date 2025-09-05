@@ -32,7 +32,7 @@ const manager = new Manager({
     {
       host: 'lavalink-pmh4.onrender.com',
       port: 2333,
-      password: 'x9Fv3bWqLz7Rt2YmNs8PaC1DjUh0XeKV',
+      password: process.env.PASS_LAVA,
       secure: true
     }
   ],
