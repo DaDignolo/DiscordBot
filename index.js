@@ -7,8 +7,7 @@ const {
   REST, 
   Routes, 
   PermissionsBitField, 
-  MessageFlags,
-  MessageActivityType
+  MessageFlags
 } = require('discord.js');
 const axios = require('axios');
 
@@ -105,7 +104,17 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('ogur')
-    .setDescription('On god you retarded')
+    .setDescription('On god you retarded'),
+
+  // Added /play slash command
+  new SlashCommandBuilder()
+    .setName('play')
+    .setDescription('Play a song from YouTube or URL')
+    .addStringOption(option =>
+      option.setName('query')
+        .setDescription('Name or URL of the song to play')
+        .setRequired(true)
+    )
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -149,12 +158,14 @@ client.on('interactionCreate', async interaction => {
 
   const { commandName } = interaction;
 
+  // Your existing command handlers...
+
   if (commandName === 'ban') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
 
     if (user.id === GOD_ID) {
-      return await interaction.reply({ content: 'Non puoi bannare il mio pet.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Non puoi bannare il mio pet.', ephemeral: true });
     }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
@@ -174,7 +185,7 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
 
     if (user.id === GOD_ID) {
-      return await interaction.reply({ content: 'Non puoi Kickare il mio pet.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Non puoi Kickare il mio pet.', ephemeral: true });
     }
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
@@ -226,15 +237,15 @@ client.on('interactionCreate', async interaction => {
     const member = interaction.guild.members.cache.get(user.id);
   
     if (user.id === GOD_ID) {
-      return await interaction.reply({ content: 'Non puoi disconnettere il mio pet.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Non puoi disconnettere il mio pet.', ephemeral: true });
     }
   
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
-      return await interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', ephemeral: true });
     }
   
     if (!member || !member.voice.channel) {
-      return await interaction.reply({ content: 'Questo utente non è in un canale vocale.', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Questo utente non è in un canale vocale.', ephemeral: true });
     }
   
     try {
@@ -249,19 +260,19 @@ client.on('interactionCreate', async interaction => {
     const amount = interaction.options.getInteger('numero');
 
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-      return interaction.reply({ content: 'Non hai il permesso di cancellare i messaggi.', flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: 'Non hai il permesso di cancellare i messaggi.', ephemeral: true });
     }
 
     if (amount < 1 || amount > 100) {
-      return interaction.reply({ content: 'Devi specificare un numero tra 1 e 100.', flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: 'Devi specificare un numero tra 1 e 100.', ephemeral: true });
     }
 
     try {
       const deleted = await interaction.channel.bulkDelete(amount, true);
-      await interaction.reply({ content: `Ho cancellato ${deleted.size} messaggi.`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `Ho cancellato ${deleted.size} messaggi.`, ephemeral: true });
     } catch (error) {
       console.error(error);
-      await interaction.reply({ content: 'Errore nella cancellazione dei messaggi. Controlla che i messaggi non siano piú vecchi di 14 giorni', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Errore nella cancellazione dei messaggi. Controlla che i messaggi non siano piú vecchi di 14 giorni', ephemeral: true });
     }
   }
 
@@ -277,12 +288,12 @@ client.on('interactionCreate', async interaction => {
     const hasRole = member.roles.cache.some(role => role.name === requiredRole);
 
     if (!hasRole) {
-      await interaction.reply({ content: 'Non hai il permesso di usare questo comando', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Non hai il permesso di usare questo comando', ephemeral: true });
       return;
     }
 
     if (!spamchannel) {
-      return await interaction.reply({ content: 'Canale non trovato', flags: MessageFlags.Ephemeral });
+      return await interaction.reply({ content: 'Canale non trovato', ephemeral: true });
     }
 
     const messaggio = interaction.options.getString('messaggio');
@@ -290,73 +301,55 @@ client.on('interactionCreate', async interaction => {
 
     if (volte > 50) volte = 50;
 
-    await interaction.reply({ content: `Sto spammando il messaggio ${messaggio}, ${volte} volte`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `Sto spammando il messaggio ${messaggio}, ${volte} volte`, ephemeral: true });
 
     for (let i = 0; i < volte; i++) {
       await spamchannel.send(messaggio);
       await new Promise(res => setTimeout(res, 700));
     }
   }
-});
 
-// Music play command using message commands
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (!message.guild) return;
+  // New slash command: /play
+  if (commandName === 'play') {
+    const query = interaction.options.getString('query');
+    const voiceChannel = interaction.member.voice.channel;
 
-  // Basic greeting responses (keep these)
-  if (message.content.toLowerCase() === 'hi mommy') {
-    message.reply(`Hi ${message.author}, now bark for me`);
-    return;
-  }
-  if (message.content.toLowerCase() === 'woof woof') {
-    message.reply(`Good boy`);
-    return;
-  }
+    if (!voiceChannel) {
+      return interaction.reply({ content: 'Devi essere in un canale vocale per riprodurre musica!', ephemeral: true });
+    }
 
-  const prefix = '!';
-  if (!message.content.startsWith(prefix)) return;
+    let player = manager.players.get(interaction.guild.id);
 
-  const args = message.content.slice(prefix.length).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
-
-  if (command === 'play') {
-    if (!args.length) return message.channel.send('Please provide a song name or URL!');
-
-    const voiceChannel = message.member.voice.channel;
-    if (!voiceChannel) return message.channel.send('You need to be in a voice channel to play music!');
-
-    // Create or get player for the guild
-    let player = manager.players.get(message.guild.id);
     if (!player) {
       player = manager.create({
-        guild: message.guild.id,
+        guild: interaction.guild.id,
         voiceChannel: voiceChannel.id,
-        textChannel: message.channel.id,
+        textChannel: interaction.channel.id,
         selfDeafen: true
       });
     } else {
       if (player.voiceChannel !== voiceChannel.id) player.setVoiceChannel(voiceChannel.id);
-      player.setTextChannel(message.channel.id);
+      player.setTextChannel(interaction.channel.id);
     }
 
     if (player.state !== 'CONNECTED') await player.connect();
 
-    const search = args.join(' ');
-    const res = await manager.search(search, message.author);
+    await interaction.deferReply();
+
+    const res = await manager.search(query, interaction.user);
 
     if (res.loadType === 'NO_MATCHES') {
-      return message.channel.send(`No results found for **${search}**.`);
+      return interaction.editReply(`Nessun risultato trovato per **${query}**.`);
     } else if (res.loadType === 'LOAD_FAILED') {
-      return message.channel.send('Failed to load the track, please try again later.');
+      return interaction.editReply('Errore nel caricamento del brano, riprova più tardi.');
     }
 
     if (res.loadType === 'PLAYLIST_LOADED') {
       player.queue.add(res.tracks);
-      message.channel.send(`Playlist **${res.playlist.name}** added to the queue!`);
+      await interaction.editReply(`Playlist **${res.playlist.name}** aggiunta alla coda!`);
     } else {
       player.queue.add(res.tracks[0]);
-      message.channel.send(`Track **${res.tracks[0].title}** added to the queue!`);
+      await interaction.editReply(`Brano **${res.tracks[0].title}** aggiunto alla coda!`);
     }
 
     if (!player.playing && !player.paused) player.play();
