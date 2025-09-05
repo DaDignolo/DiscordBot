@@ -31,7 +31,7 @@ const manager = new Manager({
   nodes: [
     {
       host: 'lavalink-pmh4.onrender.com',
-      port: 443,
+      port: 2333,
       password: 'x9Fv3bWqLz7Rt2YmNs8PaC1DjUh0XeKV',
       secure: true
     }
