@@ -154,6 +154,14 @@ manager.on('queueEnd', player => {
   player.destroy();
 });
 
+manager.on('nodeConnect', node =>
+    console.log(`Lavalink node connected: ${node.options.host}:${node.options.port}`)
+  )
+  .on('nodeError', (node, error) =>
+    console.error(`Lavalink node error on ${node.options.host}:`, error)
+  );
+
+
 // Handle slash commands
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
