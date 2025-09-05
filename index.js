@@ -31,10 +31,10 @@ const manager = new Manager({
   nodes: [
     {
       host: 'lavalink-pmh4.onrender.com',
-      port: 80,
-      password: "x9Fv3bWqLz7Rt2YmNs8PaC1DjUh0XeKV",
+      port: 443,
+      password: process.env.PASS_LAVA,
       identifier: 'render-node',
-      secure: false
+      secure: true
     }
   ],
   send(id, payload) {
