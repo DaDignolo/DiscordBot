@@ -153,12 +153,14 @@ manager.on('queueEnd', player => {
   player.destroy();
 });
 
-manager.on('nodeConnect', node =>
-    console.log(`Lavalink node connected: ${node.options.host}:${node.options.port}`)
-  )
-  .on('nodeError', (node, error) =>
-    console.error(`Lavalink node error on ${node.options.host}:`, error)
-  );
+manager.on('nodeConnect', node => {
+  console.log(`Lavalink node "${node.options.identifier}" connected.`);
+});
+
+manager.on('nodeError', (node, error) => {
+  console.error(`Lavalink node "${node.options.identifier}" encountered error: ${error.message}`);
+});
+
 
 
 // Handle slash commands
