@@ -131,9 +131,9 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-client.once('ready', () => {
-  console.log('✅ Bot è online!');
-  manager.init(client.user.id);  // Initialize Lavalink manager
+client.once('clientReady', () => {
+  console.log('✅ Client ready – initializing Lavalink');
+  manager.init(client.user.id);
 });
 
 // Lavalink events
