@@ -9,7 +9,8 @@ RUN apt-get update && \
 
 COPY application.yml .
 
-RUN wget https://github.com/freyacodes/Lavalink/releases/latest/download/Lavalink.jar
+# Download Lavalink v3.7.13 jar explicitly from GitHub releases
+RUN wget https://github.com/lavalink-devs/lavalink/releases/download/3.7.13/Lavalink.jar
 
 EXPOSE 2333
 
