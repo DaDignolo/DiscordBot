@@ -4,10 +4,26 @@ server:
   ssl:
     enabled: false
 
-
 lavalink:
+  plugins:
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
+      repository: "https://maven.lavalink.dev/releases"
+      snapshot: false
   server:
     password: "x9Fv3bWqLz7Rt2YmNs8PaC1DjUh0XeKV"
     sources:
-      youtube: true
+      youtube: false      # Important: disable the built-in YouTube source
       soundcloud: true
+
+  pluginsConfig:
+    youtube:
+      enabled: true       # Enable the youtube-source plugin
+      allowSearch: true
+      allowDirectVideoIds: true
+      allowDirectPlaylistIds: true
+      clients:
+        - MUSIC
+        - ANDROID_VR
+        - WEB
+        - WEBEMBEDDED
+      # Optionally add OAuth config here if needed
