@@ -131,7 +131,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log('Client ready');
   manager.init(client.user.id);
 });
