@@ -4,10 +4,10 @@ server:
 
 lavalink:
   plugins:
-    # Replace both VERSIONs with the latest from each project's GitHub Releases page
-    - dependency: "dev.lavalink.youtube:youtube-plugin:YOUTUBE_PLUGIN_VERSION"
-      repository: "https://maven.lavalink.dev/releases"
-    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:LAVASRC_VERSION"
+    - dependency: "dev.lavalink.youtube:youtube-plugin:1.18.2"
+      snapshot: false
+    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:4.8.3"
+      snapshot: false
   server:
     password: "${PASS_LAVA}"
     sources:
