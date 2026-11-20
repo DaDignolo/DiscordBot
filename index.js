@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Manager } = require('erela.js');
+const { Shoukaku, Connectors } = require('shoukaku');
 const {
   Client,
   Events,
@@ -27,25 +27,98 @@ const GUILD_ID = process.env.GUILD_ID;
 const GOD_ID = '183596970366074880';
 const SPAM_CHANNEL_ID = '1370906498414411796';
 
-const manager = new Manager({
-  nodes: [
+// ---------------------------------------------------------------------------
+// Lavalink v4 (Shoukaku)
+// ---------------------------------------------------------------------------
+const shoukaku = new Shoukaku(
+  new Connectors.DiscordJS(client),
+  [
     {
-      host: 'lavalink-pmh4.onrender.com',
-      port: 443, // Render serves over HTTPS on 443
-      password: process.env.PASS_LAVA,
-      secure: true
+      name: 'main',
+      url: 'lavalink-pmh4.onrender.com:443', // host:port, no protocol
+      auth: process.env.PASS_LAVA,
+      secure: true // wss/https
     }
   ],
-  send(id, payload) {
-    const guild = client.guilds.cache.get(id);
-    if (guild) guild.shard.send(payload);
+  {
+    reconnectTries: 10 // the free Render service may be asleep for a while
   }
-});
+);
 
-// REQUIRED: forward raw gateway events so Erela can join voice channels
-client.on('raw', d => manager.updateVoiceState(d));
+shoukaku.on('ready', name => console.log(`Lavalink node "${name}" connected.`));
+shoukaku.on('error', (name, error) =>
+  console.error(`Lavalink node "${name}" error: ${error.message}`)
+);
+shoukaku.on('close', (name, code, reason) =>
+  console.warn(`Lavalink node "${name}" closed (${code}): ${reason}`)
+);
+shoukaku.on('disconnect', name => console.warn(`Lavalink node "${name}" disconnected.`));
 
-// Register slash commands
+// Per-guild playback state: { player, queue: [], playing: bool, textChannelId }
+const guildStates = new Map();
+
+function sendText(state, content) {
+  const channel = client.channels.cache.get(state.textChannelId);
+  if (channel) channel.send(content).catch(() => {});
+}
+
+function destroyState(guildId) {
+  guildStates.delete(guildId);
+  shoukaku.leaveVoiceChannel(guildId).catch(() => {});
+}
+
+async function playNext(guildId) {
+  const state = guildStates.get(guildId);
+  if (!state) return;
+
+  const track = state.queue.shift();
+  if (!track) {
+    state.playing = false;
+    sendText(state, 'Queue has ended, leaving the voice channel.');
+    destroyState(guildId);
+    return;
+  }
+
+  state.playing = true;
+  try {
+    await state.player.playTrack({ track: { encoded: track.encoded } });
+    sendText(state, `🎶 Now playing: **${track.info.title}**`);
+  } catch (err) {
+    console.error('playTrack failed:', err);
+    sendText(state, `❌ Couldn't play **${track.info.title}**, skipping.`);
+    playNext(guildId);
+  }
+}
+
+function attachPlayerEvents(guildId, state) {
+  const { player } = state;
+
+  player.on('end', data => {
+    // 'replaced' / 'stopped' / 'cleanup' are caused by us, not by a natural end
+    if (data.reason === 'finished' || data.reason === 'loadFailed') {
+      playNext(guildId);
+    }
+  });
+
+  player.on('exception', data => {
+    console.error('Track exception:', data.exception);
+    sendText(state, '❌ Error while playing this track, skipping.');
+    // Lavalink sends an "end" event with reason loadFailed right after this.
+  });
+
+  player.on('stuck', () => {
+    playNext(guildId); // starting a new track replaces the stuck one
+  });
+
+  player.on('closed', data => {
+    console.warn('Voice websocket closed:', data.code, data.reason);
+    destroyState(guildId);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Slash commands
+// ---------------------------------------------------------------------------
 const commands = [
   new SlashCommandBuilder()
     .setName('ban')
@@ -112,7 +185,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName('play')
-    .setDescription('Play a song from YouTube or URL')
+    .setDescription('Play a song from YouTube, Spotify or URL')
     .addStringOption(option =>
       option.setName('query')
         .setDescription('Name or URL of the song to play')
@@ -134,41 +207,8 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-// Events.ClientReady works on both older ('ready') and newer ('clientReady') discord.js v14
 client.once(Events.ClientReady, () => {
   console.log('Client ready');
-  manager.init(client.user.id);
-});
-
-// Lavalink events
-manager.on('nodeConnect', node => {
-  console.log(`Lavalink node "${node.options.identifier}" connected.`);
-});
-
-manager.on('nodeError', (node, error) => {
-  console.error(`Lavalink node "${node.options.identifier}" encountered error: ${error.message}`);
-});
-
-manager.on('trackStart', (player, track) => {
-  const channel = client.channels.cache.get(player.textChannel);
-  if (channel) channel.send(`🎶 Now playing: **${track.title}**`);
-});
-
-manager.on('trackError', (player, track, payload) => {
-  console.error('Track error:', payload);
-  const channel = client.channels.cache.get(player.textChannel);
-  if (channel) channel.send(`❌ Couldn't play **${track.title}**, skipping.`);
-  player.stop();
-});
-
-manager.on('trackStuck', (player, track) => {
-  player.stop();
-});
-
-manager.on('queueEnd', player => {
-  const channel = client.channels.cache.get(player.textChannel);
-  if (channel) channel.send('Queue has ended, leaving the voice channel.');
-  player.destroy();
 });
 
 // Handle slash commands
@@ -337,43 +377,56 @@ client.on('interactionCreate', async interaction => {
 
       await interaction.deferReply();
 
-      const node = manager.nodes.first();
-      if (!node || !node.connected) {
-        return await interaction.editReply('❌ Lavalink node is not connected.');
+      const node = shoukaku.getIdealNode();
+      if (!node) {
+        return await interaction.editReply('❌ Lavalink node is not connected (it may be waking up, try again in a minute).');
       }
 
-      let player = manager.players.get(interaction.guild.id);
-      if (!player) {
-        player = manager.create({
-          guild: interaction.guild.id,
-          voiceChannel: voiceChannel.id,
-          textChannel: interaction.channel.id,
-          selfDeafen: true,
-        });
-      }
+      // URLs (YouTube, Spotify, ...) go as they are, plain text is searched on YouTube
+      const identifier = /^https?:\/\//i.test(query) ? query : `ytsearch:${query}`;
+      const result = await node.rest.resolve(identifier);
 
-      if (player.state !== 'CONNECTED') player.connect();
-
-      const res = await manager.search(query, interaction.user);
-
-      if (res.loadType === 'NO_MATCHES') {
+      if (!result || result.loadType === 'empty') {
         return await interaction.editReply(`❌ No results found for \`${query}\`.`);
       }
 
-      if (res.loadType === 'LOAD_FAILED') {
-        console.error('Load failed:', res.exception);
+      if (result.loadType === 'error') {
+        console.error('Load failed:', result.data);
         return await interaction.editReply('❌ Failed to load the track.');
       }
 
-      if (res.loadType === 'PLAYLIST_LOADED') {
-        player.queue.add(res.tracks);
-        await interaction.editReply(`✅ Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
+      let tracks;
+      let message;
+      if (result.loadType === 'playlist') {
+        tracks = result.data.tracks;
+        message = `✅ Playlist **${result.data.info.name}** added with ${tracks.length} tracks.`;
+      } else if (result.loadType === 'search') {
+        tracks = [result.data[0]];
+        message = `✅ Track **${tracks[0].info.title}** added to queue.`;
       } else {
-        player.queue.add(res.tracks[0]);
-        await interaction.editReply(`✅ Track **${res.tracks[0].title}** added to queue.`);
+        // 'track'
+        tracks = [result.data];
+        message = `✅ Track **${tracks[0].info.title}** added to queue.`;
       }
 
-      if (!player.playing && !player.paused) player.play();
+      const guildId = interaction.guild.id;
+      let state = guildStates.get(guildId);
+      if (!state) {
+        const player = await shoukaku.joinVoiceChannel({
+          guildId,
+          channelId: voiceChannel.id,
+          shardId: interaction.guild.shardId,
+          deaf: true
+        });
+        state = { player, queue: [], playing: false, textChannelId: interaction.channel.id };
+        guildStates.set(guildId, state);
+        attachPlayerEvents(guildId, state);
+      }
+
+      state.queue.push(...tracks);
+      await interaction.editReply(message);
+
+      if (!state.playing) playNext(guildId);
 
     } catch (error) {
       console.error('Error in /play command:', error);
