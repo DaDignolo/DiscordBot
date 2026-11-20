@@ -361,6 +361,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       if (res.loadType === 'LOAD_FAILED') {
+        console.error('Load failed:', res.exception);
         return await interaction.editReply('❌ Failed to load the track.');
       }
 
