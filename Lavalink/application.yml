@@ -1,29 +1,39 @@
 server:
-  port: 2333
+  port: ${PORT:2333}   # Render gives the port in the PORT env var
   address: 0.0.0.0
-  ssl:
-    enabled: false
 
 lavalink:
   plugins:
-    - dependency: "dev.lavalink.youtube:youtube-plugin:1.11.4"
+    # Replace both VERSIONs with the latest from each project's GitHub Releases page
+    - dependency: "dev.lavalink.youtube:youtube-plugin:YOUTUBE_PLUGIN_VERSION"
       repository: "https://maven.lavalink.dev/releases"
-      snapshot: false
+    - dependency: "com.github.topi314.lavasrc:lavasrc-plugin:LAVASRC_VERSION"
   server:
-    password: "x9Fv3bWqLz7Rt2YmNs8PaC1DjUh0XeKV"
+    password: "${PASS_LAVA}"
     sources:
-      youtube: false      # Important: disable the built-in YouTube source
+      youtube: false   # built-in YouTube source must be off when using the plugin
       soundcloud: true
+      http: true
 
-  pluginsConfig:
-    youtube:
-      enabled: true       # Enable the youtube-source plugin
-      allowSearch: true
-      allowDirectVideoIds: true
-      allowDirectPlaylistIds: true
-      clients:
-        - MUSIC
-        - ANDROID_VR
-        - WEB
-        - WEBEMBEDDED
-      # Optionally add OAuth config here if needed
+plugins:
+  youtube:
+    enabled: true
+    allowSearch: true
+    clients: [MUSIC, WEB, TVHTML5EMBEDDED]   # may need changing as YouTube changes; see the plugin README
+    oauth:
+      enabled: true
+      # First boot: the logs print a Google login link + code. Authorize with a throwaway
+      # Google account, copy the refresh token from the logs into the YT_REFRESH_TOKEN
+      # env var on Render, then uncomment the next two lines.
+      # refreshToken: "${YT_REFRESH_TOKEN}"
+      # skipInitialization: true
+  lavasrc:
+    providers:
+      - "ytsearch:\"%ISRC%\""
+      - "ytsearch:%QUERY%"
+    sources:
+      spotify: true
+    spotify:
+      clientId: "${SPOTIFY_CLIENT_ID}"
+      clientSecret: "${SPOTIFY_CLIENT_SECRET}"
+      countryCode: "CH"

@@ -1,17 +1,19 @@
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre
 
-WORKDIR /app
+WORKDIR /opt/Lavalink
 
 RUN apt-get update && \
     apt-get install -y wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY application.yml .
+# Check https://github.com/lavalink-devs/Lavalink/releases for the latest 4.x version
+ARG LAVALINK_VERSION=4.1.1
+RUN wget -O Lavalink.jar https://github.com/lavalink-devs/Lavalink/releases/download/${LAVALINK_VERSION}/Lavalink.jar
 
-# Download Lavalink v3.7.13 jar explicitly from GitHub releases
-RUN wget https://github.com/lavalink-devs/lavalink/releases/download/3.7.13/Lavalink.jar
+COPY application.yml .
 
 EXPOSE 2333
 
-CMD ["java", "-jar", "Lavalink.jar"]
+# Cap heap so the JVM stays under Render's 512 MB limit
+CMD ["java", "-Xmx384m", "-jar", "Lavalink.jar"]
