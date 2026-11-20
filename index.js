@@ -85,7 +85,11 @@ async function playNext(guildId) {
     await state.player.playTrack({ track: { encoded: track.encoded } });
     console.log('playNext: playTrack resolved');
     sendText(state, `🎶 Now playing: **${track.info.title}**`);
-  } catch (err) {
+    } catch (err) {
+      console.error('playTrack failed:', err);
+      sendText(state, `❌ Couldn't play **${track.info.title}**, skipping.`);
+      playNext(guildId);
+  }
 }
 
 function attachPlayerEvents(guildId, state) {
@@ -455,6 +459,5 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply(`🗑️ Ho rimosso ${count} brani dalla coda.`);
   } 
 });
-}
 
 client.login(TOKEN);
