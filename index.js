@@ -1,12 +1,13 @@
 require('dotenv').config();
 const { Manager } = require('erela.js');
-const { 
-  Client, 
-  GatewayIntentBits, 
-  SlashCommandBuilder, 
-  REST, 
-  Routes, 
-  PermissionsBitField 
+const {
+  Client,
+  Events,
+  GatewayIntentBits,
+  SlashCommandBuilder,
+  REST,
+  Routes,
+  PermissionsBitField
 } = require('discord.js');
 const axios = require('axios');
 
@@ -30,7 +31,7 @@ const manager = new Manager({
   nodes: [
     {
       host: 'lavalink-pmh4.onrender.com',
-      port: 2333,
+      port: 443, // Render serves over HTTPS on 443
       password: process.env.PASS_LAVA,
       secure: true
     }
@@ -40,6 +41,9 @@ const manager = new Manager({
     if (guild) guild.shard.send(payload);
   }
 });
+
+// REQUIRED: forward raw gateway events so Erela can join voice channels
+client.on('raw', d => manager.updateVoiceState(d));
 
 // Register slash commands
 const commands = [
@@ -83,8 +87,8 @@ const commands = [
     .setDescription('Cancella messaggi nel canale')
     .addIntegerOption(option =>
       option.setName('numero')
-      .setDescription('Quanti messaggi vuoi cancellare (max 100)')
-      .setRequired(true)
+        .setDescription('Quanti messaggi vuoi cancellare (max 100)')
+        .setRequired(true)
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageMessages),
 
@@ -93,20 +97,19 @@ const commands = [
     .setDescription('Spam')
     .addStringOption(option =>
       option.setName('messaggio')
-      .setDescription('Messaggio da spammare')
-      .setRequired(true)
+        .setDescription('Messaggio da spammare')
+        .setRequired(true)
     )
     .addIntegerOption(option =>
       option.setName('numero')
-      .setDescription('Quante volte vuoi spammare')
-      .setRequired(true)
+        .setDescription('Quante volte vuoi spammare')
+        .setRequired(true)
     ),
 
   new SlashCommandBuilder()
     .setName('ogur')
     .setDescription('On god you retarded'),
 
-  // Added /play slash command
   new SlashCommandBuilder()
     .setName('play')
     .setDescription('Play a song from YouTube or URL')
@@ -131,19 +134,19 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-client.once('clientReady', () => {
+// Events.ClientReady works on both older ('ready') and newer ('clientReady') discord.js v14
+client.once(Events.ClientReady, () => {
   console.log('Client ready');
   manager.init(client.user.id);
 });
 
-manager.on('clientReady', (player) => {
-  console.log(`Lavalink node ready for guild ${player.guild}`);
-});
-
-
 // Lavalink events
 manager.on('nodeConnect', node => {
   console.log(`Lavalink node "${node.options.identifier}" connected.`);
+});
+
+manager.on('nodeError', (node, error) => {
+  console.error(`Lavalink node "${node.options.identifier}" encountered error: ${error.message}`);
 });
 
 manager.on('trackStart', (player, track) => {
@@ -151,14 +154,21 @@ manager.on('trackStart', (player, track) => {
   if (channel) channel.send(`🎶 Now playing: **${track.title}**`);
 });
 
+manager.on('trackError', (player, track, payload) => {
+  console.error('Track error:', payload);
+  const channel = client.channels.cache.get(player.textChannel);
+  if (channel) channel.send(`❌ Couldn't play **${track.title}**, skipping.`);
+  player.stop();
+});
+
+manager.on('trackStuck', (player, track) => {
+  player.stop();
+});
+
 manager.on('queueEnd', player => {
   const channel = client.channels.cache.get(player.textChannel);
   if (channel) channel.send('Queue has ended, leaving the voice channel.');
   player.destroy();
-});
-
-manager.on('nodeError', (node, error) => {
-  console.error(`Lavalink node "${node.options.identifier}" encountered error: ${error.message}`);
 });
 
 // Handle slash commands
@@ -242,19 +252,19 @@ client.on('interactionCreate', async interaction => {
   else if (commandName === 'disconnect') {
     const user = interaction.options.getUser('utente');
     const member = interaction.guild.members.cache.get(user.id);
-  
+
     if (user.id === GOD_ID) {
       return await interaction.reply({ content: 'Non puoi disconnettere il mio pet.', ephemeral: true });
     }
-  
+
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
       return await interaction.reply({ content: 'Non hai il permesso di disconnettere utenti dai canali vocali.', ephemeral: true });
     }
-  
+
     if (!member || !member.voice.channel) {
       return await interaction.reply({ content: 'Questo utente non è in un canale vocale.', ephemeral: true });
     }
-  
+
     try {
       await member.voice.disconnect();
       await interaction.reply(`Utente **${user.tag}** disconnesso dal canale vocale.`);
@@ -316,73 +326,65 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // Play command fixed with deferReply and editReply
-  if (commandName === 'play') {
-  try {
-    const query = interaction.options.getString('query');
-    const voiceChannel = interaction.member.voice.channel;
+  else if (commandName === 'play') {
+    try {
+      const query = interaction.options.getString('query');
+      const voiceChannel = interaction.member.voice.channel;
 
-    if (!voiceChannel) {
-      return await interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
-    }
-
-    // Defer reply as early as possible
-    await interaction.deferReply();
-
-    if (manager.nodes.size === 0 || !manager.nodes.first().connected) {
-      return await interaction.editReply('❌ Lavalink node is not connected.');
-    }
-
-    let player = manager.players.get(interaction.guild.id);
-    if (!player) {
-      player = manager.create({
-        guild: interaction.guild.id,
-        voiceChannel: voiceChannel.id,
-        textChannel: interaction.channel.id,
-        selfDeafen: true,
-      });
-    }
-
-    if (player.state !== 'CONNECTED') await player.connect();
-
-    const res = await manager.search(query, interaction.user);
-
-    if (res.loadType === 'NO_MATCHES') {
-      return await interaction.editReply(`❌ No results found for \`${query}\`.`);
-    }
-
-    if (res.loadType === 'LOAD_FAILED') {
-      return await interaction.editReply('❌ Failed to load the track.');
-    }
-
-    if (res.loadType === 'PLAYLIST_LOADED') {
-      player.queue.add(res.tracks);
-      await interaction.editReply(`✅ Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
-    } else {
-      player.queue.add(res.tracks[0]);
-      await interaction.editReply(`✅ Track **${res.tracks[0].title}** added to queue.`);
-    }
-
-    if (!player.playing && !player.paused && player.queue.length) player.play();
-
-  } catch (error) {
-    console.error('Error in /play command:', error);
-    if (!interaction.replied) {
-      try {
-        await interaction.reply({ content: '❌ An error occurred.', ephemeral: true });
-      } catch (e) {
-        console.error('Failed to send fallback error reply:', e);
+      if (!voiceChannel) {
+        return await interaction.reply({ content: 'You must be in a voice channel!', ephemeral: true });
       }
-    } else {
+
+      await interaction.deferReply();
+
+      const node = manager.nodes.first();
+      if (!node || !node.connected) {
+        return await interaction.editReply('❌ Lavalink node is not connected.');
+      }
+
+      let player = manager.players.get(interaction.guild.id);
+      if (!player) {
+        player = manager.create({
+          guild: interaction.guild.id,
+          voiceChannel: voiceChannel.id,
+          textChannel: interaction.channel.id,
+          selfDeafen: true,
+        });
+      }
+
+      if (player.state !== 'CONNECTED') player.connect();
+
+      const res = await manager.search(query, interaction.user);
+
+      if (res.loadType === 'NO_MATCHES') {
+        return await interaction.editReply(`❌ No results found for \`${query}\`.`);
+      }
+
+      if (res.loadType === 'LOAD_FAILED') {
+        return await interaction.editReply('❌ Failed to load the track.');
+      }
+
+      if (res.loadType === 'PLAYLIST_LOADED') {
+        player.queue.add(res.tracks);
+        await interaction.editReply(`✅ Playlist **${res.playlist.name}** added with ${res.tracks.length} tracks.`);
+      } else {
+        player.queue.add(res.tracks[0]);
+        await interaction.editReply(`✅ Track **${res.tracks[0].title}** added to queue.`);
+      }
+
+      if (!player.playing && !player.paused) player.play();
+
+    } catch (error) {
+      console.error('Error in /play command:', error);
+      const msg = '❌ An error occurred while playing the track.';
       try {
-        await interaction.editReply('❌ An error occurred while playing the track.');
+        if (interaction.deferred || interaction.replied) await interaction.editReply(msg);
+        else await interaction.reply({ content: msg, ephemeral: true });
       } catch (e) {
-        console.error('Failed to edit reply:', e);
+        console.error('Failed to send error reply:', e);
       }
     }
   }
-}
-
 });
 
 client.login(TOKEN);
