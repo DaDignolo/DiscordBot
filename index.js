@@ -198,7 +198,10 @@ const commands = [
     ),  
   new SlashCommandBuilder()
     .setName('clearqueue')
-    .setDescription('Svuota la coda musicale')
+    .setDescription('Svuota la coda musicale'),
+  new SlashCommandBuilder()
+    .setName('skip')
+    .setDescription('Salta la canzone attuale')
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -457,7 +460,22 @@ client.on('interactionCreate', async interaction => {
     const count = state.queue.length;
     state.queue.length = 0;
     await interaction.reply(`🗑️ Ho rimosso ${count} brani dalla coda.`);
-  } 
+  }
+  else if (commandName === 'skip') {
+    const state = guildStates.get(interaction.guild.id);
+
+    if (!state || !state.playing) {
+      return interaction.reply({ content: 'Non sta suonando niente.', ephemeral: true });
+    }
+
+    const voiceChannel = interaction.member.voice.channel;
+    if (!voiceChannel) {
+      return interaction.reply({ content: 'Devi essere in un canale vocale.', ephemeral: true });
+    }
+
+    await interaction.reply('⏭️ Canzone saltata.');
+    playNext(interaction.guild.id);
+  }
 });
 
 client.login(TOKEN);

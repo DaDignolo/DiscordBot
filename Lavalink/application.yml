@@ -19,7 +19,7 @@ plugins:
   youtube:
     enabled: true
     allowSearch: true
-    clients: [MUSIC, WEB, TV]   # may need changing as YouTube changes; see the plugin README
+    clients: [MUSIC, TVHTML5EMBEDDED, WEBEMBEDDED, WEB]   # may need changing as YouTube changes; see the plugin README
     oauth:
       enabled: true
       # First boot: the logs print a Google login link + code. Authorize with a throwaway
