@@ -101,8 +101,8 @@ function attachPlayerEvents(guildId, state) {
   });
 
   player.on('exception', data => {
-    console.error('Track exception:', data.exception);
-    sendText(state, '❌ Error while playing this track, skipping.');
+    console.error('Track exception:', JSON.stringify(data, null, 2));
+    sendText(state, `❌ Error while playing this track: ${data.exception?.message ?? 'unknown'}`);
     // Lavalink sends an "end" event with reason loadFailed right after this.
   });
 
