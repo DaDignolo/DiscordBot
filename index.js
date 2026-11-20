@@ -119,6 +119,7 @@ function attachPlayerEvents(guildId, state) {
 
   player.on('start', () => console.log('Lavalink: track started'));
   player.on('end', data => console.log('Lavalink: track ended, reason =', data.reason));
+  player.on('update', data => console.log('player update:', JSON.stringify(data.state)));
 }
 
 // ---------------------------------------------------------------------------
