@@ -455,6 +455,6 @@ client.on('interactionCreate', async interaction => {
     await interaction.reply(`🗑️ Ho rimosso ${count} brani dalla coda.`);
   } 
 });
+}
 
 client.login(TOKEN);
-}
