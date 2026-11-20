@@ -81,13 +81,11 @@ async function playNext(guildId) {
 
   state.playing = true;
   try {
+    console.log('playNext: sending track to Lavalink:', track.info.title);
     await state.player.playTrack({ track: { encoded: track.encoded } });
+    console.log('playNext: playTrack resolved');
     sendText(state, `🎶 Now playing: **${track.info.title}**`);
   } catch (err) {
-    console.error('playTrack failed:', err);
-    sendText(state, `❌ Couldn't play **${track.info.title}**, skipping.`);
-    playNext(guildId);
-  }
 }
 
 function attachPlayerEvents(guildId, state) {
@@ -114,6 +112,9 @@ function attachPlayerEvents(guildId, state) {
     console.warn('Voice websocket closed:', data.code, data.reason);
     destroyState(guildId);
   });
+
+  player.on('start', () => console.log('Lavalink: track started'));
+  player.on('end', data => console.log('Lavalink: track ended, reason =', data.reason));
 }
 
 // ---------------------------------------------------------------------------
