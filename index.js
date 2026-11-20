@@ -190,7 +190,10 @@ const commands = [
       option.setName('query')
         .setDescription('Name or URL of the song to play')
         .setRequired(true)
-    )
+    ),  
+  new SlashCommandBuilder()
+    .setName('clearqueue')
+    .setDescription('Svuota la coda musicale')
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -439,6 +442,17 @@ client.on('interactionCreate', async interaction => {
       }
     }
   }
+  else if (commandName === 'clearqueue') {
+    const state = guildStates.get(interaction.guild.id);
+
+    if (!state || state.queue.length === 0) {
+      return interaction.reply({ content: 'La coda è già vuota.', ephemeral: true });
+    }
+
+    const count = state.queue.length;
+    state.queue.length = 0;
+    await interaction.reply(`🗑️ Ho rimosso ${count} brani dalla coda.`);
+  } 
 });
 
 client.login(TOKEN);
